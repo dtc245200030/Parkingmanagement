@@ -1,0 +1,172 @@
+-- ========================================================================
+-- Hệ thống Quản lý Bãi đỗ xe Thông minh (ParkAI Management System)
+-- File DDL & Khởi tạo CSDL cho Microsoft SQL Server
+-- Tương thích tài liệu thiết kế CSDL.docx (10 Bảng)
+-- ========================================================================
+
+-- 1. Bảng VaiTro (Danh mục vai trò người dùng)
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[VaiTro]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[VaiTro] (
+        [MaVaiTro] INT IDENTITY(1,1) NOT NULL,
+        [TenVaiTro] NVARCHAR(50) NOT NULL UNIQUE,
+        [MoTa] NVARCHAR(255) NULL,
+        CONSTRAINT [PK_VaiTro] PRIMARY KEY CLUSTERED ([MaVaiTro] ASC)
+    );
+END;
+GO
+
+-- 2. Bảng NguoiDung (Người dùng hệ thống)
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[NguoiDung]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[NguoiDung] (
+        [MaNguoiDung] INT IDENTITY(1,1) NOT NULL,
+        [TenDangNhap] VARCHAR(50) NOT NULL UNIQUE,
+        [MatKhau] VARCHAR(255) NOT NULL,
+        [HoTen] NVARCHAR(100) NOT NULL,
+        [SoDienThoai] VARCHAR(20) NULL,
+        [MaVaiTro] INT NOT NULL,
+        [TrangThai] NVARCHAR(20) NOT NULL DEFAULT N'Hoạt động',
+        [NgayTao] DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT [PK_NguoiDung] PRIMARY KEY CLUSTERED ([MaNguoiDung] ASC),
+        CONSTRAINT [FK_NguoiDung_VaiTro] FOREIGN KEY ([MaVaiTro]) REFERENCES [dbo].[VaiTro]([MaVaiTro]) ON DELETE NO ACTION ON UPDATE CASCADE
+    );
+END;
+GO
+
+-- 3. Bảng KhuVuc (Khu vực đỗ xe)
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[KhuVuc]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[KhuVuc] (
+        [MaKhuVuc] INT IDENTITY(1,1) NOT NULL,
+        [TenKhuVuc] NVARCHAR(10) NOT NULL,
+        [SucChuaToiDa] INT NOT NULL CHECK ([SucChuaToiDa] > 0),
+        [MoTa] VARCHAR(255) NULL,
+        CONSTRAINT [PK_KhuVuc] PRIMARY KEY CLUSTERED ([MaKhuVuc] ASC)
+    );
+END;
+GO
+
+-- 4. Bảng LoaiXe (Loại phương tiện)
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[LoaiXe]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[LoaiXe] (
+        [MaLoaiXe] INT IDENTITY(1,1) NOT NULL,
+        [TenLoaiXe] VARCHAR(50) NOT NULL UNIQUE,
+        [MoTa] VARCHAR(255) NULL,
+        CONSTRAINT [PK_LoaiXe] PRIMARY KEY CLUSTERED ([MaLoaiXe] ASC)
+    );
+END;
+GO
+
+-- 5. Bảng PhuongTien (Thông tin xe gửi)
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[PhuongTien]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[PhuongTien] (
+        [MaPhuongTien] INT IDENTITY(1,1) NOT NULL,
+        [BienSoXe] VARCHAR(20) NOT NULL,
+        [MaLoaiXe] INT NOT NULL,
+        [MauXe] VARCHAR(50) NULL,
+        [MoTa] VARCHAR(255) NULL,
+        CONSTRAINT [PK_PhuongTien] PRIMARY KEY CLUSTERED ([MaPhuongTien] ASC),
+        CONSTRAINT [FK_PhuongTien_LoaiXe] FOREIGN KEY ([MaLoaiXe]) REFERENCES [dbo].[LoaiXe]([MaLoaiXe]) ON DELETE NO ACTION ON UPDATE CASCADE
+    );
+END;
+GO
+
+-- 6. Bảng VeXe (Vé xe / Thẻ RFID)
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[VeXe]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[VeXe] (
+        [MaVe] INT IDENTITY(1,1) NOT NULL,
+        [MaDinhDanhThe] VARCHAR(50) NOT NULL UNIQUE,
+        [LoaiThe] NVARCHAR(20) NOT NULL CHECK ([LoaiThe] IN (N'Vé lượt', N'Vé tháng')),
+        [TrangThaiThe] NVARCHAR(20) NOT NULL DEFAULT N'Sẵn sàng',
+        CONSTRAINT [PK_VeXe] PRIMARY KEY CLUSTERED ([MaVe] ASC)
+    );
+END;
+GO
+
+-- 7. Bảng LuotGuiXe (Giao dịch xe vào/ra)
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[LuotGuiXe]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[LuotGuiXe] (
+        [MaLuotGui] INT IDENTITY(1,1) NOT NULL,
+        [MaVe] INT NOT NULL,
+        [MaPhuongTien] INT NULL,
+        [BienSoXeKiemTra] VARCHAR(20) NOT NULL,
+        [MaViTri] INT NULL,
+        [ThoiGianVao] DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        [ThoiGianRa] DATETIME NULL,
+        [MaNguoiDungVao] INT NOT NULL,
+        [MaNguoiDungRa] INT NULL,
+        [TongTienPhi] DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+        [TrangThaiLuot] VARCHAR(20) NOT NULL DEFAULT 'Đang gửi',
+        CONSTRAINT [PK_LuotGuiXe] PRIMARY KEY CLUSTERED ([MaLuotGui] ASC),
+        CONSTRAINT [FK_LuotGuiXe_VeXe] FOREIGN KEY ([MaVe]) REFERENCES [dbo].[VeXe]([MaVe]),
+        CONSTRAINT [FK_LuotGuiXe_PhuongTien] FOREIGN KEY ([MaPhuongTien]) REFERENCES [dbo].[PhuongTien]([MaPhuongTien]),
+        CONSTRAINT [FK_LuotGuiXe_NguoiDungVao] FOREIGN KEY ([MaNguoiDungVao]) REFERENCES [dbo].[NguoiDung]([MaNguoiDung]),
+        CONSTRAINT [FK_LuotGuiXe_NguoiDungRa] FOREIGN KEY ([MaNguoiDungRa]) REFERENCES [dbo].[NguoiDung]([MaNguoiDung]),
+        CONSTRAINT [CK_LuotGuiXe_ThoiGian] CHECK ([ThoiGianRa] IS NULL OR [ThoiGianRa] >= [ThoiGianVao])
+    );
+END;
+GO
+
+-- 8. Bảng BangGia (Bảng giá tính phí)
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[BangGia]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[BangGia] (
+        [MaBangGia] INT IDENTITY(1,1) NOT NULL,
+        [MaLoaiXe] INT NOT NULL,
+        [LoaiApDung] VARCHAR(20) NOT NULL CHECK ([LoaiApDung] IN ('VeLuot', 'VeThang')),
+        [GiaCoBan] DECIMAL(12, 2) NOT NULL CHECK ([GiaCoBan] >= 0),
+        [DonViThoiGianPhut] INT NOT NULL DEFAULT 60,
+        [GiaTangThem] DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+        [GiaBanDem] DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+        [NgayApDung] DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT [PK_BangGia] PRIMARY KEY CLUSTERED ([MaBangGia] ASC),
+        CONSTRAINT [FK_BangGia_LoaiXe] FOREIGN KEY ([MaLoaiXe]) REFERENCES [dbo].[LoaiXe]([MaLoaiXe])
+    );
+END;
+GO
+
+-- 9. Bảng VeThang (Đăng ký vé tháng)
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[VeThang]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[VeThang] (
+        [MaVeThang] INT IDENTITY(1,1) NOT NULL,
+        [MaThe] INT NOT NULL,
+        [MaPhuongTien] INT NOT NULL,
+        [HoTenKhachHang] NVARCHAR(100) NOT NULL,
+        [SoDienThoai] VARCHAR(20) NULL,
+        [NgayBatDau] DATE NOT NULL,
+        [NgayKetThuc] DATE NOT NULL,
+        [MoiGiaHan] BIT NOT NULL DEFAULT 1,
+        [TrangThaiVe] NVARCHAR(20) NOT NULL DEFAULT N'Còn hiệu lực',
+        CONSTRAINT [PK_VeThang] PRIMARY KEY CLUSTERED ([MaVeThang] ASC),
+        CONSTRAINT [FK_VeThang_VeXe] FOREIGN KEY ([MaThe]) REFERENCES [dbo].[VeXe]([MaVe]),
+        CONSTRAINT [FK_VeThang_PhuongTien] FOREIGN KEY ([MaPhuongTien]) REFERENCES [dbo].[PhuongTien]([MaPhuongTien]),
+        CONSTRAINT [CK_VeThang_Ngay] CHECK ([NgayKetThuc] >= [NgayBatDau])
+    );
+END;
+GO
+
+-- 10. Bảng BaoCaoThongKe (Dữ liệu thống kê & AI)
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[BaoCaoThongKe]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[BaoCaoThongKe] (
+        [MaBaoCao] INT IDENTITY(1,1) NOT NULL,
+        [LoaiBaoCao] VARCHAR(20) NOT NULL CHECK ([LoaiBaoCao] IN ('Ngay', 'Tuan', 'Thang')),
+        [NgayBatDau] DATE NOT NULL,
+        [NgayKetThuc] DATE NOT NULL,
+        [MaKhuVuc] INT NULL,
+        [TongLuotXe] INT NOT NULL DEFAULT 0,
+        [TongDoanhThu] DECIMAL(14, 2) NOT NULL DEFAULT 0.00,
+        [TyLeLapDayTrungBinh] DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+        [KhungGioCaoDiem] VARCHAR(255) NULL,
+        [NgayTao] DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT [PK_BaoCaoThongKe] PRIMARY KEY CLUSTERED ([MaBaoCao] ASC),
+        CONSTRAINT [FK_BaoCaoThongKe_KhuVuc] FOREIGN KEY ([MaKhuVuc]) REFERENCES [dbo].[KhuVuc]([MaKhuVuc])
+    );
+END;
+GO
