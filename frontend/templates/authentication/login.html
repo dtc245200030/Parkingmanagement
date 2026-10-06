@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Đăng nhập - ParkAI Manager{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="login-box">
+    <div class="text-center mb-4">
+      <div class="brand-logo-circle mx-auto mb-3">
+        <i class="fa-solid fa-car-side"></i>
+      </div>
+      <h3 class="fw-bold text-white mb-1">ParkAI Manager</h3>
+      <p class="text-muted small">Hệ thống quản lý bãi đỗ xe thông minh</p>
+    </div>
+
+    <form id="standalone-login-form">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="small fw-bold text-muted mb-2 text-uppercase">TÊN TÀI KHOẢN</label>
+        <div class="position-relative">
+          <input id="login-username-input" class="form-dark-input ps-4" placeholder="Nhập tên tài khoản" required>
+          <i class="fa-regular fa-user position-absolute text-muted" style="right: 16px; top: 16px;"></i>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="small fw-bold text-muted mb-2 text-uppercase">MẬT KHẨU</label>
+        <div class="position-relative">
+          <input id="login-password-input" type="password" class="form-dark-input ps-4" placeholder="Nhập mật khẩu" required>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3 fs-6" style="background: #0095ff; border: 0;">
+        Đăng nhập
+      </button>
+
+      <div class="text-center mt-3">
+        <a href="/" class="text-decoration-none text-muted small"><i class="fa-solid fa-arrow-left me-1"></i> Quay về trang chủ / Dashboard</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

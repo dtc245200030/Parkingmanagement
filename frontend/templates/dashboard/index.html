@@ -1,0 +1,1317 @@
+{% extends "base.html" %}
+
+{% block title %}ParkAI Manager - Quản lý bãi đỗ xe thông minh{% endblock %}
+
+{% block content %}
+  <form class="d-none">{% csrf_token %}</form>
+  <div id="global-toast" class="d-none"></div>
+
+  <!-- 1. CHỌN VAI TRÒ -->
+  <div id="role-selection-view" class="auth-wrapper">
+    <div class="text-center mb-4">
+      <div class="brand-logo-circle mx-auto mb-3">
+        <i class="fa-solid fa-car-side"></i>
+      </div>
+      <h2 class="fw-bold text-white mb-1">ParkAI Manager</h2>
+      <p class="text-white opacity-75 small">Hệ thống quản lý bãi đỗ xe thông minh & Tự động hóa AI</p>
+    </div>
+
+    <div class="text-white small mb-3 fw-bold text-uppercase letter-spacing-1">Vui lòng chọn vai trò để đăng nhập:</div>
+
+    <div class="role-card role-manager" onclick="selectRole('manager')">
+      <div class="d-flex align-items-center gap-3">
+        <div class="role-icon-box icon-box-blue">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div>
+          <div class="fw-bold text-white fs-6">Quản lý (Toàn quyền)</div>
+          <div class="text-white opacity-75 small">Xem thống kê, xuất báo cáo, phân quyền nhân sự, cài đặt biểu phí</div>
+        </div>
+      </div>
+      <i class="fa-solid fa-chevron-right text-white"></i>
+    </div>
+
+    <div class="role-card role-staff" onclick="selectRole('staff')">
+      <div class="d-flex align-items-center gap-3">
+        <div class="role-icon-box icon-box-green">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <div>
+          <div class="fw-bold text-white fs-6">Nhân viên bãi xe</div>
+          <div class="text-white opacity-75 small">Ghi nhận xe vào/ra, tính phí, quản lý khu vực đỗ, tra cứu, vé tháng</div>
+        </div>
+      </div>
+      <i class="fa-solid fa-chevron-right text-white"></i>
+    </div>
+
+    <div class="d-flex align-items-center gap-3 mt-3">
+      <button class="btn btn-outline-info btn-sm rounded-pill px-3 fw-bold text-white" onclick="openRegisterModal()">
+        <i class="fa-solid fa-user-plus me-1"></i> Đăng ký tài khoản mới
+      </button>
+    </div>
+
+    <div class="text-center text-white opacity-75 small mt-4">
+      ParkAI v2.0 • Hệ thống Quản lý Bãi đỗ xe Thông minh
+    </div>
+  </div>
+
+  <!-- 2. ĐĂNG NHẬP -->
+  <div id="login-view" class="auth-wrapper d-none">
+    <div class="w-100" style="max-width: 460px;">
+      <button class="btn btn-link text-decoration-none text-white p-0 mb-3 d-flex align-items-center gap-2 fw-semibold" onclick="backToRoleSelect()">
+        <i class="fa-solid fa-chevron-left"></i> Chọn vai trò khác
+      </button>
+
+      <div id="active-role-box" class="dark-card mb-3 p-3 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+          <div id="login-role-icon" class="role-icon-box icon-box-blue">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <div id="login-role-title" class="fw-bold text-white fs-6">Quản lý</div>
+            <div id="login-role-email" class="text-white opacity-75 small">admin@baidoxe.vn</div>
+          </div>
+        </div>
+        <i class="fa-solid fa-check text-info fs-5"></i>
+      </div>
+
+      <div class="login-box">
+        <h3 class="text-center fw-bold text-white mb-4">Đăng nhập hệ thống</h3>
+        <form id="auth-login-form">
+          <div class="mb-3">
+            <label class="small fw-bold text-white mb-2 text-uppercase">TÊN TÀI KHOẢN</label>
+            <div class="position-relative">
+              <input id="login-username" class="form-dark-input ps-4" placeholder="Nhập tên tài khoản của bạn" required>
+              <i class="fa-regular fa-user position-absolute text-white opacity-50" style="right: 16px; top: 16px;"></i>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="small fw-bold text-white mb-2 text-uppercase">MẬT KHẨU</label>
+            <div class="position-relative">
+              <input id="login-password" type="password" class="form-dark-input ps-4" placeholder="Nhập mật khẩu của bạn" required>
+              <i id="toggle-pwd-btn" class="fa-regular fa-eye position-absolute text-white opacity-50" style="right: 16px; top: 16px; cursor: pointer;" onclick="togglePasswordVisibility()"></i>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3 fs-6" style="background: #0095ff; border: 0;">
+            <i class="fa-solid fa-right-to-bracket me-2"></i> Đăng nhập
+          </button>
+
+          <div class="text-center mt-3 pt-3 border-top border-secondary border-opacity-25">
+            <span class="text-white opacity-75 small">Chưa có tài khoản? </span>
+            <button type="button" class="btn btn-link text-info text-decoration-none p-0 small fw-bold" onclick="openRegisterModal()">
+              Đăng ký ngay
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. APP SHELL (GIAO DIỆN CHÍNH) -->
+  <div id="app-shell-view" class="app-shell d-none">
+    <!-- SIDEBAR -->
+    <aside class="app-sidebar">
+      <div class="sidebar-header">
+        <div class="d-flex align-items-center gap-2">
+          <div class="brand-logo-circle" style="width: 38px; height: 38px; font-size: 17px; border-radius: 10px;">
+            <i class="fa-solid fa-car-side"></i>
+          </div>
+          <div>
+            <div class="fw-bold text-white fs-6 lh-1">ParkAI</div>
+            <div class="text-white opacity-75" style="font-size: 0.72rem;">Quản lý bãi đỗ xe</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Links with Role Permissions -->
+      <nav class="sidebar-nav">
+        <!-- Tab 1: Tổng quan (Manager only) -->
+        <button class="nav-item-btn active" data-panel="overview">
+          <i class="fa-solid fa-table-cells-large"></i>
+          <span>Tổng quan</span>
+          <i class="fa-solid fa-chevron-right nav-arrow"></i>
+        </button>
+
+        <!-- Tab 2: Xe vào / Xe ra (Staff only) -->
+        <button class="nav-item-btn" data-panel="checkinout">
+          <i class="fa-solid fa-car"></i>
+          <span>Xe vào / Ra & Tính phí</span>
+          <i class="fa-solid fa-chevron-right nav-arrow"></i>
+        </button>
+
+        <!-- Tab 3: Bản đồ khu vực đỗ (Staff & Manager) -->
+        <button class="nav-item-btn" data-panel="parking-map">
+          <i class="fa-solid fa-location-dot"></i>
+          <span>Bản đồ khu đỗ</span>
+          <i class="fa-solid fa-chevron-right nav-arrow"></i>
+        </button>
+
+        <!-- Tab 4: Tra cứu lượt xe (Staff only) -->
+        <button class="nav-item-btn" data-panel="history">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <span>Tra cứu lượt xe</span>
+          <i class="fa-solid fa-chevron-right nav-arrow"></i>
+        </button>
+
+        <!-- Tab 5: Vé tháng (Staff & Manager) -->
+        <button class="nav-item-btn" data-panel="monthly">
+          <i class="fa-regular fa-id-card"></i>
+          <span>Quản lý vé tháng</span>
+          <i class="fa-solid fa-chevron-right nav-arrow"></i>
+        </button>
+
+        <!-- Tab 6: Thống kê & Báo cáo (Manager only) -->
+        <button class="nav-item-btn" data-panel="statistics">
+          <i class="fa-solid fa-chart-column"></i>
+          <span>Thống kê & Báo cáo</span>
+          <i class="fa-solid fa-chevron-right nav-arrow"></i>
+        </button>
+
+        <!-- Tab 7: Trợ lý AI (Manager only) -->
+        <button class="nav-item-btn" data-panel="ai">
+          <i class="fa-solid fa-robot"></i>
+          <span>Trợ lý AI</span>
+          <i class="fa-solid fa-chevron-right nav-arrow"></i>
+        </button>
+
+        <!-- Tab 8: Quản lý nhân viên (Manager only) -->
+        <button class="nav-item-btn" data-panel="staff">
+          <i class="fa-solid fa-user-group"></i>
+          <span>Quản lý nhân viên</span>
+          <i class="fa-solid fa-chevron-right nav-arrow"></i>
+        </button>
+
+        <!-- Tab 9: Cài đặt hệ thống (Manager only) -->
+        <button class="nav-item-btn" data-panel="settings">
+          <i class="fa-solid fa-gear"></i>
+          <span>Cài đặt hệ thống</span>
+          <i class="fa-solid fa-chevron-right nav-arrow"></i>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div id="user-avatar-badge" class="user-avatar-circle">N</div>
+        <div class="flex-grow-1 overflow-hidden">
+          <div id="current-user-fullname" class="fw-bold text-white text-truncate small">Nguyễn Văn Quản</div>
+          <div id="current-user-role-text" class="fw-bold text-info small" style="font-size: 0.78rem;">Quản lý hệ thống</div>
+          <div id="sidebar-role-tag" class="status-pill bg-primary bg-opacity-25 text-white border border-primary border-opacity-50 mt-1" style="font-size: 0.72rem; padding: 2px 8px;">Toàn quyền quản trị</div>
+        </div>
+        <button class="btn btn-link text-white p-0" title="Đăng xuất" onclick="logoutApp()">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="app-main-content">
+      <!-- TAB 1: TỔNG QUAN -->
+      <section id="panel-overview" class="content-tab-pane">
+        <div class="top-content-header">
+          <div>
+            <h1 class="page-title">Tổng quan hệ thống</h1>
+            <div id="current-date-str" class="page-subtitle">Dữ liệu kết nối thời gian thực với CSDL</div>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-outline-info btn-sm rounded-pill px-3 fw-bold" onclick="exportExcel('history')">
+              <i class="fa-solid fa-file-excel me-1 text-success"></i> Xuất Excel báo cáo
+            </button>
+            <div class="d-flex align-items-center gap-2 bg-dark px-3 py-2 rounded-pill border border-secondary border-opacity-25">
+              <span class="d-inline-block rounded-circle bg-success" style="width: 8px; height: 8px;"></span>
+              <span class="small text-white fw-bold">CSDL: Đang hoạt động</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI METRICS -->
+        <div class="row g-3 mb-4">
+          <div class="col-lg-3 col-sm-6">
+            <div class="metric-card-kpi">
+              <div class="metric-title-row">
+                <span class="metric-label">TỔNG SỨC CHỨA</span>
+                <div class="metric-icon-small bg-primary bg-opacity-10 text-primary"><i class="fa-solid fa-location-dot"></i></div>
+              </div>
+              <div class="metric-val" id="kpi-total-capacity">300</div>
+              <div class="metric-note">Toàn bộ 4 khu vực <span class="trend-up">~ 300 chỗ</span></div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-sm-6">
+            <div class="metric-card-kpi">
+              <div class="metric-title-row">
+                <span class="metric-label">ĐANG GỬI XE</span>
+                <div class="metric-icon-small" style="background: rgba(139,92,246,0.15); color: #8b5cf6;"><i class="fa-solid fa-car"></i></div>
+              </div>
+              <div class="metric-val" id="metric-active-vehicles">12</div>
+              <div class="metric-note"><span id="metric-occupancy-rate">3% công suất</span> <span class="trend-up">Thực tế CSDL</span></div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-sm-6">
+            <div class="metric-card-kpi">
+              <div class="metric-title-row">
+                <span class="metric-label">LƯỢT VÀO HÔM NAY</span>
+                <div class="metric-icon-small bg-success bg-opacity-10 text-success"><i class="fa-solid fa-arrow-trend-up"></i></div>
+              </div>
+              <div class="metric-val" id="metric-today-in">25</div>
+              <div class="metric-note"><span id="metric-today-out">13 lượt đã ra</span> <span class="trend-up">+15% vs hôm qua</span></div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-sm-6">
+            <div class="metric-card-kpi">
+              <div class="metric-title-row">
+                <span class="metric-label">DOANH THU HÔM NAY</span>
+                <div class="metric-icon-small text-warning" style="background: rgba(245,158,11,0.15);"><i class="fa-solid fa-dollar-sign"></i></div>
+              </div>
+              <div class="metric-val" id="metric-today-revenue">297.000 đ</div>
+              <div class="metric-note">Cập nhật tự động <span class="trend-up">+11%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ZONE CAPACITY CARDS -->
+        <div class="row g-4">
+          <div class="col-lg-8">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="dark-card">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="zone-badge badge-zone-a">A</span>
+                      <div><div class="fw-bold text-white small">Khu A</div><div class="text-white opacity-75" style="font-size: 0.76rem;"><i class="fa-solid fa-motorcycle text-primary"></i> Xe máy</div></div>
+                    </div>
+                    <span class="status-pill status-inlot">Còn chỗ</span>
+                  </div>
+                  <div class="d-flex justify-content-between text-white small mt-2"><span>Lưu lượng hiện tại:</span><span class="fw-bold text-white"><span id="zone-a-count">3</span>/120</span></div>
+                  <div class="dark-progress"><div id="zone-a-progress" class="dark-progress-bar bg-primary" style="width: 3%;"></div></div>
+                  <div class="d-flex justify-content-between text-center pt-2 border-top border-secondary border-opacity-10 mt-2">
+                    <div><div class="fw-bold text-white fs-6" id="zone-a-count-2">3</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Đang gửi</div></div>
+                    <div><div class="fw-bold text-white fs-6" id="zone-a-avail">117</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Còn trống</div></div>
+                    <div><div class="fw-bold text-white fs-6" id="zone-a-rate">3%</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Công suất</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="dark-card">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="zone-badge badge-zone-b">B</span>
+                      <div><div class="fw-bold text-white small">Khu B</div><div class="text-white opacity-75" style="font-size: 0.76rem;"><i class="fa-solid fa-motorcycle text-success"></i> Xe máy • <i class="fa-solid fa-bicycle text-success"></i> Xe đạp</div></div>
+                    </div>
+                    <span class="status-pill status-inlot">Còn chỗ</span>
+                  </div>
+                  <div class="d-flex justify-content-between text-white small mt-2"><span>Lưu lượng hiện tại:</span><span class="fw-bold text-white"><span id="zone-b-count">2</span>/80</span></div>
+                  <div class="dark-progress"><div id="zone-b-progress" class="dark-progress-bar bg-success" style="width: 3%;"></div></div>
+                  <div class="d-flex justify-content-between text-center pt-2 border-top border-secondary border-opacity-10 mt-2">
+                    <div><div class="fw-bold text-white fs-6" id="zone-b-count-2">2</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Đang gửi</div></div>
+                    <div><div class="fw-bold text-white fs-6" id="zone-b-avail">78</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Còn trống</div></div>
+                    <div><div class="fw-bold text-white fs-6" id="zone-b-rate">3%</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Công suất</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="dark-card">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="zone-badge badge-zone-c">C</span>
+                      <div><div class="fw-bold text-white small">Khu C</div><div class="text-white opacity-75" style="font-size: 0.76rem;"><i class="fa-solid fa-car" style="color:#a78bfa;"></i> Ô tô 4-7 chỗ</div></div>
+                    </div>
+                    <span class="status-pill status-inlot">Còn chỗ</span>
+                  </div>
+                  <div class="d-flex justify-content-between text-white small mt-2"><span>Lưu lượng hiện tại:</span><span class="fw-bold text-white"><span id="zone-c-count">3</span>/60</span></div>
+                  <div class="dark-progress"><div id="zone-c-progress" class="dark-progress-bar" style="background: #8b5cf6; width: 5%;"></div></div>
+                  <div class="d-flex justify-content-between text-center pt-2 border-top border-secondary border-opacity-10 mt-2">
+                    <div><div class="fw-bold text-white fs-6" id="zone-c-count-2">3</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Đang gửi</div></div>
+                    <div><div class="fw-bold text-white fs-6" id="zone-c-avail">57</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Còn trống</div></div>
+                    <div><div class="fw-bold text-white fs-6" id="zone-c-rate">5%</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Công suất</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="dark-card">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="zone-badge badge-zone-d">D</span>
+                      <div><div class="fw-bold text-white small">Khu D</div><div class="text-white opacity-75" style="font-size: 0.76rem;"><i class="fa-solid fa-car text-warning"></i> Ô tô & Tải nhỏ</div></div>
+                    </div>
+                    <span class="status-pill status-inlot">Còn chỗ</span>
+                  </div>
+                  <div class="d-flex justify-content-between text-white small mt-2"><span>Lưu lượng hiện tại:</span><span class="fw-bold text-white"><span id="zone-d-count">2</span>/40</span></div>
+                  <div class="dark-progress"><div id="zone-d-progress" class="dark-progress-bar bg-warning" style="width: 5%;"></div></div>
+                  <div class="d-flex justify-content-between text-center pt-2 border-top border-secondary border-opacity-10 mt-2">
+                    <div><div class="fw-bold text-white fs-6" id="zone-d-count-2">2</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Đang gửi</div></div>
+                    <div><div class="fw-bold text-white fs-6" id="zone-d-avail">38</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Còn trống</div></div>
+                    <div><div class="fw-bold text-white fs-6" id="zone-d-rate">5%</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Công suất</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-4">
+            <div class="dark-card h-100 d-flex flex-column justify-content-between">
+              <div>
+                <div class="fw-bold text-white fs-6 mb-3">Lưu lượng theo giờ hôm nay</div>
+                <div style="height: 220px; position: relative;">
+                  <canvas id="overviewTrafficChart"></canvas>
+                </div>
+              </div>
+              <div class="d-flex justify-content-between align-items-center text-white small pt-3 border-top border-secondary border-opacity-10 mt-3">
+                <span class="opacity-75">Xe ra vào gần đây</span>
+                <button class="btn btn-link text-info text-decoration-none p-0 small fw-bold" data-staff-only onclick="switchNavPanel('history')">Xem tất cả</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: XE VÀO / XE RA -->
+      <section id="panel-checkinout" class="content-tab-pane d-none">
+        <div class="top-content-header">
+          <div>
+            <h1 class="page-title">Ghi nhận Xe vào / Xe ra & Tính phí</h1>
+            <div class="page-subtitle">Nhân viên trực ca ghi nhận biển số, phân bổ khu vực và thanh toán</div>
+          </div>
+        </div>
+
+        <div class="tab-pill-switch">
+          <button id="btn-tab-checkin" class="tab-pill-btn active" onclick="switchCheckinTab('in')">
+            <i class="fa-solid fa-car"></i> 1. Ghi nhận xe vào
+          </button>
+          <button id="btn-tab-checkout" class="tab-pill-btn" onclick="switchCheckinTab('out')">
+            <i class="fa-solid fa-flag-checkered"></i> 2. Ghi nhận xe ra & Tính phí
+          </button>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-lg-7">
+            <!-- CHECK-IN FORM -->
+            <div id="checkin-form-box" class="dark-card">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="fw-bold text-white fs-5 mb-0"><i class="fa-solid fa-arrow-right-to-bracket text-primary me-2"></i> Ghi nhận xe vào bãi</h3>
+                <span class="status-pill status-inlot">Trực ca: <span id="checkin-staff-name" class="fw-bold">Trần Thị Mai</span></span>
+              </div>
+
+              <!-- Quick Plate Buttons for testing -->
+              <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                <span class="text-white opacity-75 small fw-bold">Biển số mẫu thử nhanh:</span>
+                <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 rounded-pill small fw-semibold text-white" onclick="quickSetPlate('30A-99881', 'Oto', 'C')">30A-99881 (Ô tô)</button>
+                <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 rounded-pill small fw-semibold text-white" onclick="quickSetPlate('29K-88219', 'XeMay', 'A')">29K-88219 (Xe máy)</button>
+                <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 rounded-pill small fw-semibold text-white" onclick="quickSetPlate('ZE-888', 'XeDap', 'B')">ZE-888 (Xe đạp)</button>
+              </div>
+
+              <form id="real-checkin-form">
+                <div class="mb-4">
+                  <label class="small fw-bold text-white text-uppercase mb-2">BIỂN SỐ XE (*)</label>
+                  <input id="in-plate-number" class="form-dark-input fs-4 fw-bold text-info py-3" placeholder="VD: 51A-88888 hoặc 29B1-23456" required autocomplete="off">
+                </div>
+
+                <div class="mb-4">
+                  <label class="small fw-bold text-white text-uppercase mb-2">CHỌN LOẠI XE</label>
+                  <div class="row g-3">
+                    <div class="col-4">
+                      <div class="vehicle-type-select-card active" data-type="XeMay" onclick="selectVehicleType(this, 'XeMay', '5.000 đ/giờ')">
+                        <div class="fs-4 mb-2 text-warning"><i class="fa-solid fa-motorcycle"></i></div>
+                        <div class="fw-bold text-white small">Xe máy</div>
+                        <div class="text-white opacity-75 small" style="font-size: 0.74rem;">5.000 đ/giờ</div>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="vehicle-type-select-card" data-type="Oto" onclick="selectVehicleType(this, 'Oto', '20.000 đ/giờ')">
+                        <div class="fs-4 mb-2 text-danger"><i class="fa-solid fa-car"></i></div>
+                        <div class="fw-bold text-white small">Ô tô</div>
+                        <div class="text-white opacity-75 small" style="font-size: 0.74rem;">20.000 đ/giờ</div>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="vehicle-type-select-card" data-type="XeDap" onclick="selectVehicleType(this, 'XeDap', '2.000 đ/giờ')">
+                        <div class="fs-4 mb-2 text-info"><i class="fa-solid fa-bicycle"></i></div>
+                        <div class="fw-bold text-white small">Xe đạp</div>
+                        <div class="text-white opacity-75 small" style="font-size: 0.74rem;">2.000 đ/giờ</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-4">
+                  <label class="small fw-bold text-white text-uppercase mb-2">KHU VỰC PHÂN BỔ</label>
+                  <div class="dark-card p-3 d-flex align-items-center justify-content-between" style="background: var(--bg-input);">
+                    <div class="d-flex align-items-center gap-3">
+                      <span id="selected-zone-badge" class="zone-badge badge-zone-a">A</span>
+                      <span id="selected-zone-text" class="fw-bold text-white fs-6">Khu A</span>
+                    </div>
+                    <div class="small"><span class="fw-bold text-success">Tự động phân bổ theo loại xe</span></div>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3 fs-6" style="background: #0095ff; border: 0;">
+                  <i class="fa-solid fa-check me-2"></i> Xác nhận xe vào & Cấp vé lượt
+                </button>
+              </form>
+            </div>
+
+            <!-- CHECK-OUT FORM -->
+            <div id="checkout-form-box" class="dark-card d-none">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="fw-bold text-white fs-5 mb-0"><i class="fa-solid fa-flag-checkered text-success me-2"></i> Ghi nhận xe ra & Tính tiền phí</h3>
+                <span class="status-pill status-inlot">Nhân viên tính tiền: <span id="checkout-staff-name" class="fw-bold">Trần Thị Mai</span></span>
+              </div>
+
+              <form id="real-checkout-form">
+                <div class="mb-4">
+                  <label class="small fw-bold text-white text-uppercase mb-2">CHỌN XE ĐANG GỬI TRONG BÃI</label>
+                  <select id="checkout-session-select" class="form-dark-input py-3 fs-6 mb-3" onchange="onCheckoutVehicleSelected()">
+                    <option value="">-- Chọn xe trong danh sách --</option>
+                  </select>
+                </div>
+
+                <div id="checkout-calc-card" class="dark-card p-3 mb-4 d-none" style="background: var(--bg-input);">
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="text-white opacity-75 small">Thời gian vào:</span>
+                    <span id="calc-time-in" class="fw-bold text-white">--</span>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="text-white opacity-75 small">Thời gian gửi thực tế:</span>
+                    <span id="calc-duration" class="fw-bold text-info">--</span>
+                  </div>
+                  <div class="d-flex justify-content-between pt-2 border-top border-secondary border-opacity-25">
+                    <span class="fw-bold text-white fs-6">Số tiền phí phải thu:</span>
+                    <span id="calc-amount" class="fw-bold text-warning fs-4">0 đ</span>
+                  </div>
+                </div>
+
+                <div class="form-check mb-4">
+                  <input class="form-check-input" type="checkbox" id="checkout-paid-check" checked>
+                  <label class="form-check-label text-white small fw-semibold" for="checkout-paid-check">
+                    Đã thanh toán tiền mặt / Chuyển khoản QR tại quầy
+                  </label>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 py-3 fw-bold rounded-3 fs-6" style="background: #10b981; border: 0;">
+                  <i class="fa-solid fa-receipt me-2"></i> Hoàn tất xe ra, In vé & Cập nhật CSDL
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- RIGHT LIST: VEHICLES IN LOT ACCORDION -->
+          <div class="col-lg-5">
+            <div class="dark-card h-100">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="fw-bold text-white small">Xe đang trong bãi theo khu vực</div>
+                <span class="status-pill status-inlot" id="inlot-badge-count">12 xe</span>
+              </div>
+
+              <div id="inlot-vehicles-accordion" class="d-flex flex-column gap-3 overflow-auto" style="max-height: 520px;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: BẢN ĐỒ KHU ĐỖ XE -->
+      <section id="panel-parking-map" class="content-tab-pane d-none">
+        <div class="top-content-header">
+          <div>
+            <h1 class="page-title">Bản đồ khu vực đỗ xe</h1>
+            <div class="page-subtitle">Nhấn vào từng khu vực để xem chi tiết danh sách xe và nhân viên trực ca</div>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-lg-8">
+            <div class="dark-card mb-4">
+              <div class="small fw-bold text-white text-uppercase mb-3">SƠ ĐỒ PHÂN KHU BÃI XE (PARKING ZONES)</div>
+              
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <div class="map-zone-block active" onclick="selectMapZone('A')">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <div class="d-flex align-items-center gap-2"><span class="zone-badge badge-zone-a">A</span><span class="fw-bold text-white fs-6">Khu A</span></div>
+                      <div class="fw-bold text-white"><span class="fs-5" id="map-count-a">3</span> <span class="text-white opacity-75">/120</span></div>
+                    </div>
+                    <div class="text-white opacity-75 small mb-2"><i class="fa-solid fa-motorcycle text-primary"></i> Xe máy</div>
+                    <div class="dark-progress"><div class="dark-progress-bar bg-primary" style="width: 3%;"></div></div>
+                    <div class="text-white opacity-75 small fw-semibold" id="map-avail-a">3% • còn 117 chỗ</div>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="map-zone-block" onclick="selectMapZone('B')">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <div class="d-flex align-items-center gap-2"><span class="zone-badge badge-zone-b">B</span><span class="fw-bold text-white fs-6">Khu B</span></div>
+                      <div class="fw-bold text-white"><span class="fs-5" id="map-count-b">2</span> <span class="text-white opacity-75">/80</span></div>
+                    </div>
+                    <div class="text-white opacity-75 small mb-2"><i class="fa-solid fa-motorcycle text-success"></i> <i class="fa-solid fa-bicycle text-success"></i> Xe máy & Xe đạp</div>
+                    <div class="dark-progress"><div class="dark-progress-bar bg-success" style="width: 3%;"></div></div>
+                    <div class="text-white opacity-75 small fw-semibold" id="map-avail-b">3% • còn 78 chỗ</div>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="map-zone-block" onclick="selectMapZone('C')">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <div class="d-flex align-items-center gap-2"><span class="zone-badge badge-zone-c">C</span><span class="fw-bold text-white fs-6">Khu C</span></div>
+                      <div class="fw-bold text-white"><span class="fs-5" id="map-count-c">3</span> <span class="text-white opacity-75">/60</span></div>
+                    </div>
+                    <div class="text-white opacity-75 small mb-2"><i class="fa-solid fa-car" style="color:#a78bfa;"></i> Ô tô 4-7 chỗ</div>
+                    <div class="dark-progress"><div class="dark-progress-bar" style="background:#8b5cf6; width: 5%;"></div></div>
+                    <div class="text-white opacity-75 small fw-semibold" id="map-avail-c">5% • còn 57 chỗ</div>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="map-zone-block" onclick="selectMapZone('D')">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <div class="d-flex align-items-center gap-2"><span class="zone-badge badge-zone-d">D</span><span class="fw-bold text-white fs-6">Khu D</span></div>
+                      <div class="fw-bold text-white"><span class="fs-5" id="map-count-d">2</span> <span class="text-white opacity-75">/40</span></div>
+                    </div>
+                    <div class="text-white opacity-75 small mb-2"><i class="fa-solid fa-car text-warning"></i> Ô tô & Tải</div>
+                    <div class="dark-progress"><div class="dark-progress-bar bg-warning" style="width: 5%;"></div></div>
+                    <div class="text-white opacity-75 small fw-semibold" id="map-avail-d">5% • còn 38 chỗ</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-4">
+            <div class="dark-card h-100" id="map-zone-detail-card">
+              <div class="text-center py-5 text-white" id="map-empty-state">
+                <div class="display-5 mb-3 text-info"><i class="fa-solid fa-location-dot"></i></div>
+                <div class="fw-bold text-white fs-6 mb-1">Chọn một khu vực</div>
+                <div class="small opacity-75">để xem danh sách xe thực tế đang gửi</div>
+              </div>
+              <div id="map-zone-active-content" class="d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <span id="map-detail-badge" class="zone-badge badge-zone-a">A</span>
+                    <span id="map-detail-title" class="fw-bold text-white fs-6">Khu A</span>
+                  </div>
+                  <span id="map-detail-count" class="status-pill status-inlot">3 xe đang gửi</span>
+                </div>
+                <div id="map-zone-vehicle-list" class="d-flex flex-column gap-2"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: TRA CỨU LƯỢT XE & XEM VÉ -->
+      <section id="panel-history" class="content-tab-pane d-none">
+        <div class="top-content-header">
+          <div>
+            <h1 class="page-title">Tra cứu lượt xe & Xem vé</h1>
+            <div class="page-subtitle">Xem thông tin vé lượt, nhân viên ghi nhận xe vào và xe ra</div>
+          </div>
+          <button class="btn btn-outline-success btn-sm rounded-3 px-3 fw-bold text-white" onclick="exportExcel('history')">
+            <i class="fa-solid fa-file-excel me-2 text-success"></i> Xuất File Excel (.xlsx)
+          </button>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-5">
+            <div class="position-relative">
+              <input id="history-search-input" class="form-dark-input ps-5" placeholder="Tìm theo biển số, khách hàng, nhân viên trực..." oninput="filterHistoryTable()">
+              <i class="fa-solid fa-magnifying-glass position-absolute text-white opacity-50" style="left: 18px; top: 15px;"></i>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <select id="history-status-filter" class="form-dark-input" onchange="filterHistoryTable()">
+              <option value="">Tất cả trạng thái</option>
+              <option value="inlot">Đang gửi trong bãi</option>
+              <option value="completed">Đã ra khỏi bãi</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <select id="history-zone-filter" class="form-dark-input" onchange="filterHistoryTable()">
+              <option value="">Tất cả khu vực</option>
+              <option value="A">Khu A</option>
+              <option value="B">Khu B</option>
+              <option value="C">Khu C</option>
+              <option value="D">Khu D</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="custom-dark-table">
+            <thead>
+              <tr>
+                <th>Biển số</th>
+                <th>Loại xe</th>
+                <th>Khu vực</th>
+                <th>Giờ vào</th>
+                <th>Giờ ra</th>
+                <th>Thời gian</th>
+                <th>Phí</th>
+                <th>Trạng thái</th>
+                <th class="text-end">Chi tiết vé</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 5: VÉ THÁNG -->
+      <section id="panel-monthly" class="content-tab-pane d-none">
+        <div class="top-content-header">
+          <div><h1 class="page-title">Quản lý vé tháng / Khách quen</h1></div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-success btn-sm rounded-3 px-3 fw-bold text-white" onclick="exportExcel('monthly')">
+              <i class="fa-solid fa-file-excel me-1 text-success"></i> Xuất Excel Vé Tháng
+            </button>
+            <button class="btn btn-primary btn-sm rounded-3 px-3 fw-bold" style="background:#0095ff; border:0;" onclick="openAddMonthlyModal()">
+              <i class="fa-solid fa-plus me-1"></i> Thêm khách hàng vé tháng
+            </button>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="dark-card text-center py-3">
+              <div class="fs-2 fw-bold text-success" id="monthly-active-count">4</div>
+              <div class="text-white opacity-75 small fw-bold">Đang hiệu lực</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="dark-card text-center py-3">
+              <div class="fs-2 fw-bold text-danger" id="monthly-expired-count">1</div>
+              <div class="text-white opacity-75 small fw-bold">Hết hạn</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="dark-card text-center py-3">
+              <div class="fs-2 fw-bold text-white" id="monthly-total-count">5</div>
+              <div class="text-white opacity-75 small fw-bold">Tổng số vé tháng</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="position-relative mb-4" style="max-width: 380px;">
+          <input id="monthly-search-input" class="form-dark-input ps-5" placeholder="Tìm theo tên hoặc biển số..." oninput="filterMonthlyCards()">
+          <i class="fa-solid fa-magnifying-glass position-absolute text-white opacity-50" style="left: 18px; top: 15px;"></i>
+        </div>
+
+        <div class="row g-4" id="monthly-cards-container"></div>
+      </section>
+
+      <!-- TAB 6: THỐNG KÊ & BÁO CÁO (Manager Only) -->
+      <section id="panel-statistics" class="content-tab-pane d-none">
+        <div class="top-content-header">
+          <div><h1 class="page-title">Thống kê & Báo cáo số liệu</h1></div>
+          <button class="btn btn-outline-success btn-sm rounded-3 px-3 fw-bold text-white" onclick="exportExcel('history')">
+            <i class="fa-solid fa-file-excel me-2 text-success"></i> Xuất Báo Cáo Excel
+          </button>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-lg-3 col-sm-6">
+            <div class="dark-card p-3">
+              <div class="text-white opacity-75 small mb-1"><i class="fa-solid fa-car text-primary me-1"></i> Tổng lượt/tuần</div>
+              <div class="fs-3 fw-bold text-white" id="stat-week-entries">2.555</div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-sm-6">
+            <div class="dark-card p-3">
+              <div class="text-white opacity-75 small mb-1"><i class="fa-solid fa-dollar-sign text-success me-1"></i> Doanh thu/tuần</div>
+              <div class="fs-3 fw-bold text-white" id="stat-week-revenue">57.740.000 đ</div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-sm-6">
+            <div class="dark-card p-3">
+              <div class="text-white opacity-75 small mb-1"><i class="fa-solid fa-arrow-trend-up text-purple me-1"></i> Trung bình/ngày</div>
+              <div class="fs-3 fw-bold text-white" id="stat-daily-avg">365</div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-sm-6">
+            <div class="dark-card p-3">
+              <div class="text-white opacity-75 small mb-1"><i class="fa-regular fa-clock text-warning me-1"></i> Giờ cao điểm</div>
+              <div class="fs-3 fw-bold text-white">17h – 19h</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="dark-card">
+              <div class="fw-bold text-white small mb-3">Lưu lượng xe theo ngày (Tuần này)</div>
+              <div style="height: 220px; position: relative;">
+                <canvas id="statDailyTrafficChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="dark-card">
+              <div class="fw-bold text-white small mb-3">Doanh thu theo ngày (triệu VNĐ)</div>
+              <div style="height: 220px; position: relative;">
+                <canvas id="statDailyRevenueChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="dark-card">
+              <div class="fw-bold text-white small mb-3">Phân bố lưu lượng theo giờ</div>
+              <div style="height: 220px; position: relative;">
+                <canvas id="statPeakHourChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="dark-card">
+              <div class="fw-bold text-white small mb-3">Tỷ lệ lấp đầy theo từng khu vực</div>
+              <div class="row align-items-center">
+                <div class="col-7" style="height: 220px; position: relative;">
+                  <canvas id="statZoneDoughnutChart"></canvas>
+                </div>
+                <div class="col-5">
+                  <div class="d-flex flex-column gap-2 small">
+                    <div class="d-flex justify-content-between"><span class="text-white opacity-75"><span class="badge-zone-a rounded-circle d-inline-block me-1" style="width:8px;height:8px;"></span> Khu A</span><span class="fw-bold text-white">34%</span></div>
+                    <div class="d-flex justify-content-between"><span class="text-white opacity-75"><span class="badge-zone-b rounded-circle d-inline-block me-1" style="width:8px;height:8px;"></span> Khu B</span><span class="fw-bold text-white">23%</span></div>
+                    <div class="d-flex justify-content-between"><span class="text-white opacity-75"><span class="badge-zone-c rounded-circle d-inline-block me-1" style="width:8px;height:8px;"></span> Khu C</span><span class="fw-bold text-white">18%</span></div>
+                    <div class="d-flex justify-content-between"><span class="text-white opacity-75"><span class="badge-zone-d rounded-circle d-inline-block me-1" style="width:8px;height:8px;"></span> Khu D</span><span class="fw-bold text-white">15%</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: TRỢ LÝ AI (Manager Only) -->
+      <section id="panel-ai" class="content-tab-pane d-none">
+        <div class="top-content-header mb-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="role-icon-box icon-box-green" style="width:42px; height:42px;">
+              <i class="fa-solid fa-robot"></i>
+            </div>
+            <div>
+              <h1 class="page-title fs-5 mb-0">Trợ lý AI Phân Tích Bãi Đỗ</h1>
+              <div class="page-subtitle text-white opacity-75" style="font-size:0.78rem;">✦ ParkAI Assistant — Phân tích lưu lượng và tư vấn phân bổ nhân sự</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap mb-4">
+          <div class="ai-chip" onclick="askAiPrompt('Khung giờ nào đông nhất?')">Khung giờ nào đông nhất?</div>
+          <div class="ai-chip" onclick="askAiPrompt('Gợi ý bố trí nhân sự')">Gợi ý bố trí nhân sự</div>
+          <div class="ai-chip" onclick="askAiPrompt('Báo cáo doanh thu hôm nay')">Báo cáo doanh thu hôm nay</div>
+          <div class="ai-chip" onclick="askAiPrompt('Khu nào đang gần đầy?')">Khu nào đang gần đầy?</div>
+          <div class="ai-chip" onclick="askAiPrompt('Khách hàng vé tháng')">Khách hàng vé tháng</div>
+        </div>
+
+        <div class="dark-card mb-3 p-4" style="min-height: 380px; max-height: 480px; overflow-y: auto;" id="ai-chat-stream">
+          <div class="d-flex gap-3 mb-3">
+            <div class="role-icon-box icon-box-green" style="width:34px; height:34px; font-size:14px;">
+              <i class="fa-solid fa-robot"></i>
+            </div>
+            <div class="chat-bubble bubble-bot">
+              <div class="fw-bold mb-2">Xin chào! Tôi là ParkAI Assistant 🚗</div>
+              <div class="mb-2">Tôi đã kết nối trực tiếp với CSDL bãi xe. Tôi có thể giúp bạn phân tích số liệu thực tế, phát hiện khung giờ cao điểm và tối ưu hóa vận hành.</div>
+              <div class="text-info fw-semibold">👉 Chọn các gợi ý bên trên hoặc đặt câu hỏi trực tiếp!</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="position-relative">
+          <input id="ai-input-text" class="form-dark-input py-3 pe-5" placeholder="Hỏi về khu vực, doanh thu, phân bổ nhân sự..." onkeypress="if(event.key==='Enter') sendAiMessage()">
+          <button class="btn btn-primary position-absolute rounded-3 px-3" style="right: 8px; top: 7px; background:#0095ff; border:0;" onclick="sendAiMessage()">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- TAB 8: QUẢN LÝ NHÂN VIÊN (Manager Only) -->
+      <section id="panel-staff" class="content-tab-pane d-none">
+        <div class="top-content-header">
+          <div><h1 class="page-title">Quản lý nhân viên & Phân quyền</h1></div>
+          <button class="btn btn-primary btn-sm rounded-3 px-3 fw-bold" style="background:#0095ff; border:0;" onclick="openRegisterModal()">
+            <i class="fa-solid fa-user-plus me-1"></i> Thêm nhân viên / Đăng ký
+          </button>
+        </div>
+
+        <div class="d-flex flex-column gap-3 mb-4" id="staff-list-container"></div>
+      </section>
+
+      <!-- TAB 9: CÀI ĐẶT (Manager Only) -->
+      <section id="panel-settings" class="content-tab-pane d-none">
+        <div class="top-content-header">
+          <div><h1 class="page-title">Cài đặt hệ thống & Bảng giá</h1></div>
+        </div>
+
+        <div class="dark-card mb-4">
+          <h3 class="fw-bold text-white fs-6 mb-4">Biểu phí gửi xe (Lưu trong CSDL BangGia)</h3>
+          <div class="d-flex flex-column gap-3">
+            <div class="row align-items-center g-3 p-2 rounded-3" style="background: var(--bg-input);">
+              <div class="col-md-4">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="fa-solid fa-bicycle text-info"></i>
+                  <span class="fw-bold text-white small">Xe đạp / Xe điện</span>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="input-group input-group-sm">
+                  <input id="price-bike-hour" type="number" class="form-dark-input" value="2000">
+                  <span class="input-group-text bg-transparent text-white border-0">đ/giờ</span>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="input-group input-group-sm">
+                  <input id="price-bike-month" type="number" class="form-dark-input" value="50000">
+                  <span class="input-group-text bg-transparent text-white border-0">đ/tháng</span>
+                </div>
+              </div>
+              <div class="col-md-2 text-end">
+                <button class="btn btn-outline-primary btn-sm px-3 rounded-pill fw-bold" onclick="showToast('Đã lưu biểu phí Xe đạp thành công!')">Lưu</button>
+              </div>
+            </div>
+
+            <div class="row align-items-center g-3 p-2 rounded-3" style="background: var(--bg-input);">
+              <div class="col-md-4">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="fa-solid fa-motorcycle text-warning"></i>
+                  <span class="fw-bold text-white small">Xe máy</span>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="input-group input-group-sm">
+                  <input id="price-motor-hour" type="number" class="form-dark-input" value="5000">
+                  <span class="input-group-text bg-transparent text-white border-0">đ/giờ</span>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="input-group input-group-sm">
+                  <input id="price-motor-month" type="number" class="form-dark-input" value="120000">
+                  <span class="input-group-text bg-transparent text-white border-0">đ/tháng</span>
+                </div>
+              </div>
+              <div class="col-md-2 text-end">
+                <button class="btn btn-outline-primary btn-sm px-3 rounded-pill fw-bold" onclick="showToast('Đã lưu biểu phí Xe máy thành công!')">Lưu</button>
+              </div>
+            </div>
+
+            <div class="row align-items-center g-3 p-2 rounded-3" style="background: var(--bg-input);">
+              <div class="col-md-4">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="fa-solid fa-car text-danger"></i>
+                  <span class="fw-bold text-white small">Ô tô</span>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="input-group input-group-sm">
+                  <input id="price-car-hour" type="number" class="form-dark-input" value="20000">
+                  <span class="input-group-text bg-transparent text-white border-0">đ/giờ</span>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="input-group input-group-sm">
+                  <input id="price-car-month" type="number" class="form-dark-input" value="1200000">
+                  <span class="input-group-text bg-transparent text-white border-0">đ/tháng</span>
+                </div>
+              </div>
+              <div class="col-md-2 text-end">
+                <button class="btn btn-outline-primary btn-sm px-3 rounded-pill fw-bold" onclick="showToast('Đã lưu biểu phí Ô tô thành công!')">Lưu</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dark-card">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold text-white fs-6 mb-0">Danh sách Khu vực bãi đỗ (CSDL KhuVuc)</h3>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="dark-card p-3 d-flex align-items-center justify-content-between" style="background: var(--bg-input);">
+                <div class="d-flex align-items-center gap-3">
+                  <span class="zone-badge badge-zone-a">A</span>
+                  <div>
+                    <div class="fw-bold text-white small">Khu A</div>
+                    <div class="text-white opacity-75 small">120 chỗ • Xe máy</div>
+                  </div>
+                </div>
+                <span class="status-pill status-inlot">Hoạt động</span>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="dark-card p-3 d-flex align-items-center justify-content-between" style="background: var(--bg-input);">
+                <div class="d-flex align-items-center gap-3">
+                  <span class="zone-badge badge-zone-b">B</span>
+                  <div>
+                    <div class="fw-bold text-white small">Khu B</div>
+                    <div class="text-white opacity-75 small">80 chỗ • Xe máy, Xe đạp</div>
+                  </div>
+                </div>
+                <span class="status-pill status-inlot">Hoạt động</span>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="dark-card p-3 d-flex align-items-center justify-content-between" style="background: var(--bg-input);">
+                <div class="d-flex align-items-center gap-3">
+                  <span class="zone-badge badge-zone-c">C</span>
+                  <div>
+                    <div class="fw-bold text-white small">Khu C</div>
+                    <div class="text-white opacity-75 small">60 chỗ • Ô tô</div>
+                  </div>
+                </div>
+                <span class="status-pill status-inlot">Hoạt động</span>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="dark-card p-3 d-flex align-items-center justify-content-between" style="background: var(--bg-input);">
+                <div class="d-flex align-items-center gap-3">
+                  <span class="zone-badge badge-zone-d">D</span>
+                  <div>
+                    <div class="fw-bold text-white small">Khu D</div>
+                    <div class="text-white opacity-75 small">40 chỗ • Ô tô & Tải nhỏ</div>
+                  </div>
+                </div>
+                <span class="status-pill status-inlot">Hoạt động</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: XEM CHI TIẾT VÉ XE / PHIẾU GỬI XE (CỰC KỲ RÕ RÀNG & TƯƠNG PHẢN CAO) -->
+  <div class="modal fade" id="viewTicketModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="background: #0d172e; border: 2px solid #38bdf8; color: #ffffff; border-radius: 20px; box-shadow: 0 25px 60px rgba(0,0,0,0.8);">
+        <div class="modal-header d-flex justify-content-between align-items-center" style="border-bottom: 1px solid #233b66; padding: 18px 24px; background: #132244; border-top-left-radius: 18px; border-top-right-radius: 18px;">
+          <div class="d-flex align-items-center gap-3">
+            <div class="role-icon-box icon-box-blue" style="width: 40px; height: 40px; font-size: 18px;">
+              <i class="fa-solid fa-ticket"></i>
+            </div>
+            <div>
+              <h5 class="modal-title fw-bold mb-0 text-white fs-6">PHIẾU GỬI XE / VÉ ĐIỆN TỬ</h5>
+              <div class="text-info fw-semibold" style="font-size: 0.76rem;">Hệ thống Quản lý Bãi đỗ xe ParkAI</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <!-- Ticket Header Card -->
+          <div class="p-3 mb-3 rounded-3 text-center" style="background: linear-gradient(135deg, rgba(0,149,255,0.25) 0%, rgba(16,185,129,0.2) 100%); border: 2px solid #0095ff;">
+            <div class="text-white small text-uppercase fw-bold letter-spacing-1">BIỂN SỐ PHƯƠNG TIỆN</div>
+            <div class="fs-1 fw-extrabold text-white my-1" id="ticket-modal-plate">51A-12345</div>
+            <div class="d-flex justify-content-center gap-2 align-items-center mt-2">
+              <span id="ticket-modal-status" class="status-pill status-inlot fs-6">Đang gửi trong bãi</span>
+              <span class="badge bg-primary fs-6 px-3" id="ticket-modal-id">#LGX-00001</span>
+            </div>
+          </div>
+
+          <!-- Ticket Info Grid with Crystal Clear White / Cyan Text -->
+          <div class="d-flex flex-column gap-2">
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-solid fa-id-card me-2 text-info"></i> Mã thẻ định danh RFID:</span>
+              <span class="ticket-value-text text-info" id="ticket-modal-rfid">CARD-51A12345</span>
+            </div>
+
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-solid fa-car me-2 text-warning"></i> Loại phương tiện:</span>
+              <span class="ticket-value-text" id="ticket-modal-vtype">Xe máy</span>
+            </div>
+
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-solid fa-location-dot me-2 text-danger"></i> Khu vực phân bổ:</span>
+              <span class="ticket-value-text text-warning" id="ticket-modal-zone">Khu A</span>
+            </div>
+
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-solid fa-clock me-2 text-primary"></i> Thời gian xe vào:</span>
+              <span class="ticket-value-text text-white" id="ticket-modal-intime">08:00 31/08/2026</span>
+            </div>
+
+            <!-- Nhân viên ghi nhận xe vào - HIGH CONTRAST -->
+            <div class="ticket-row-box ticket-staff-row-in">
+              <span class="text-white fw-bold"><i class="fa-solid fa-user-check me-2 text-info"></i> Nhân viên ghi nhận vào:</span>
+              <span class="fw-extrabold text-info fs-6" id="ticket-modal-staff-in">Trần Thị Mai (Trực ca)</span>
+            </div>
+
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-solid fa-clock-rotate-left me-2 text-warning"></i> Thời gian xe ra:</span>
+              <span class="ticket-value-text text-white" id="ticket-modal-outtime">Đang gửi trong bãi</span>
+            </div>
+
+            <!-- Nhân viên ghi nhận xe ra - HIGH CONTRAST -->
+            <div class="ticket-row-box ticket-staff-row-out">
+              <span class="text-white fw-bold"><i class="fa-solid fa-user-tag me-2 text-success"></i> Nhân viên ghi nhận ra:</span>
+              <span class="fw-extrabold text-success fs-6" id="ticket-modal-staff-out">Chưa ghi nhận (Xe đang gửi)</span>
+            </div>
+
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-solid fa-stopwatch me-2 text-info"></i> Tổng thời gian gửi:</span>
+              <span class="ticket-value-text text-info" id="ticket-modal-duration">2 giờ 15 phút</span>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center p-3 rounded-3 mt-2" style="background: #172a50; border: 2px solid #f59e0b;">
+              <span class="fw-bold text-white fs-6">TỔNG TIỀN PHÍ DỊCH VỤ:</span>
+              <span class="fw-extrabold text-warning fs-4" id="ticket-modal-fee">15.000 đ</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="border-top: 1px solid #233b66; background: #132244; border-bottom-left-radius: 18px; border-bottom-right-radius: 18px;">
+          <button type="button" class="btn btn-outline-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" onclick="printTicketModal()">
+            <i class="fa-solid fa-print me-1"></i> In phiếu gửi xe
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: XEM CHI TIẾT VÉ THÁNG (HIGH CONTRAST) -->
+  <div class="modal fade" id="viewMonthlyTicketModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="background: #0d172e; border: 2px solid #10b981; color: #ffffff; border-radius: 20px; box-shadow: 0 25px 60px rgba(0,0,0,0.8);">
+        <div class="modal-header d-flex justify-content-between align-items-center" style="border-bottom: 1px solid #233b66; padding: 18px 24px; background: #132244; border-top-left-radius: 18px; border-top-right-radius: 18px;">
+          <div class="d-flex align-items-center gap-3">
+            <div class="role-icon-box icon-box-green" style="width: 40px; height: 40px; font-size: 18px;">
+              <i class="fa-solid fa-id-card"></i>
+            </div>
+            <div>
+              <h5 class="modal-title fw-bold mb-0 text-white fs-6">THẺ VÉ THÁNG ĐIỆN TỬ</h5>
+              <div class="text-success fw-semibold" style="font-size: 0.76rem;">Khách hàng thân thiết ParkAI</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <div class="p-3 mb-3 rounded-3 text-center" style="background: linear-gradient(135deg, rgba(16,185,129,0.25) 0%, rgba(0,149,255,0.2) 100%); border: 2px solid #10b981;">
+            <div class="text-white small text-uppercase fw-bold">KHÁCH HÀNG VÉ THÁNG</div>
+            <div class="fs-2 fw-extrabold text-white my-1" id="m-ticket-modal-name">Nguyễn Văn An</div>
+            <div class="d-flex justify-content-center gap-2 align-items-center mt-2">
+              <span id="m-ticket-modal-status" class="status-pill status-inlot fs-6">Đang hiệu lực</span>
+              <span class="badge bg-success fs-6 px-3" id="m-ticket-modal-id">#VTH-0001</span>
+            </div>
+          </div>
+
+          <div class="d-flex flex-column gap-2">
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-solid fa-id-card me-2 text-info"></i> Mã thẻ RFID:</span>
+              <span class="ticket-value-text text-info" id="m-ticket-modal-rfid">CARD-THANG-29A88888</span>
+            </div>
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-solid fa-phone me-2 text-success"></i> Số điện thoại:</span>
+              <span class="ticket-value-text text-white" id="m-ticket-modal-phone">0901234567</span>
+            </div>
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-solid fa-car me-2 text-warning"></i> Biển số phương tiện:</span>
+              <span class="ticket-value-text text-warning fs-5" id="m-ticket-modal-plate">29A-88888</span>
+            </div>
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-solid fa-tags me-2 text-info"></i> Loại xe:</span>
+              <span class="ticket-value-text text-white" id="m-ticket-modal-vtype">Ô tô</span>
+            </div>
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-regular fa-calendar-check me-2 text-primary"></i> Ngày bắt đầu:</span>
+              <span class="ticket-value-text text-white" id="m-ticket-modal-start">01/08/2026</span>
+            </div>
+            <div class="ticket-row-box">
+              <span class="ticket-label-text"><i class="fa-regular fa-calendar-xmark me-2 text-danger"></i> Ngày hết hạn:</span>
+              <span class="ticket-value-text text-danger" id="m-ticket-modal-end">31/10/2026</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="border-top: 1px solid #233b66; background: #132244; border-bottom-left-radius: 18px; border-bottom-right-radius: 18px;">
+          <button type="button" class="btn btn-outline-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-success rounded-pill px-4 fw-bold" onclick="printTicketModal()">
+            <i class="fa-solid fa-print me-1"></i> In thẻ vé tháng
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ĐĂNG KÝ TÀI KHOẢN -->
+  <div class="modal fade" id="registerAccountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="background: #131f37; border: 1px solid var(--border-color); color: white; border-radius: 16px;">
+        <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+          <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-user-plus text-primary me-2"></i> Đăng ký tài khoản mới</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="form-register-account">
+            <div class="mb-3">
+              <label class="small fw-bold text-white mb-1">TÊN TÀI KHOẢN ĐĂNG NHẬP (*)</label>
+              <input id="reg-username" class="form-dark-input" placeholder="Ví dụ: nhanvien01" required>
+            </div>
+            <div class="mb-3">
+              <label class="small fw-bold text-white mb-1">MẬT KHẨU (*)</label>
+              <div class="position-relative">
+                <input id="reg-password" type="password" class="form-dark-input" placeholder="Tối thiểu 4 ký tự" required>
+                <i id="reg-toggle-pwd" class="fa-regular fa-eye position-absolute text-white opacity-50" style="right: 16px; top: 16px; cursor: pointer;" onclick="togglePasswordVisibility('reg-password', 'reg-toggle-pwd')"></i>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="small fw-bold text-white mb-1">HỌ VÀ TÊN (*)</label>
+              <input id="reg-fullname" class="form-dark-input" placeholder="Ví dụ: Trần Văn Nam" required>
+            </div>
+            <div class="mb-3">
+              <label class="small fw-bold text-white mb-1">SỐ ĐIỆN THOẠI</label>
+              <input id="reg-phone" class="form-dark-input" placeholder="0912345678">
+            </div>
+            <div class="mb-3">
+              <label class="small fw-bold text-white mb-1">EMAIL</label>
+              <input id="reg-email" type="email" class="form-dark-input" placeholder="nam@baidoxe.vn">
+            </div>
+            <div class="mb-4">
+              <label class="small fw-bold text-white mb-1">VAI TRÒ TRUY CẬP (*)</label>
+              <select id="reg-role" class="form-dark-input">
+                <option value="NhanVien">Nhân viên bãi xe</option>
+                <option value="QuanLy">Quản lý</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3" style="background: #0095ff; border: 0;">
+              Xác nhận đăng ký
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ĐẶT LẠI MẬT KHẨU NHÂN VIÊN -->
+  <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="background: #131f37; border: 1px solid var(--border-color); color: white; border-radius: 16px;">
+        <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+          <h5 class="modal-title fw-bold text-white" id="resetPasswordModalLabel">
+            <i class="fa-solid fa-key text-warning me-2"></i> Đặt lại mật khẩu
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <form id="form-reset-password">
+          <div class="modal-body">
+            <input type="hidden" id="reset-password-user-id">
+            <div class="p-3 rounded-3 mb-3" style="background: var(--bg-input);">
+              <div class="text-white opacity-75 small">Tài khoản</div>
+              <div class="fw-bold text-info" id="reset-password-username">--</div>
+            </div>
+            <div class="mb-3">
+              <label class="small fw-bold text-white mb-1" for="reset-new-password">MẬT KHẨU MỚI (*)</label>
+              <div class="position-relative">
+                <input id="reset-new-password" type="password" class="form-dark-input pe-5" minlength="6" autocomplete="new-password" placeholder="Tối thiểu 6 ký tự" required>
+                <i id="reset-new-toggle" class="fa-regular fa-eye position-absolute text-white opacity-50" style="right:16px;top:16px;cursor:pointer;" onclick="togglePasswordVisibility('reset-new-password', 'reset-new-toggle')"></i>
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="small fw-bold text-white mb-1" for="reset-confirm-password">XÁC NHẬN MẬT KHẨU (*)</label>
+              <div class="position-relative">
+                <input id="reset-confirm-password" type="password" class="form-dark-input pe-5" minlength="6" autocomplete="new-password" placeholder="Nhập lại mật khẩu mới" required>
+                <i id="reset-confirm-toggle" class="fa-regular fa-eye position-absolute text-white opacity-50" style="right:16px;top:16px;cursor:pointer;" onclick="togglePasswordVisibility('reset-confirm-password', 'reset-confirm-toggle')"></i>
+              </div>
+            </div>
+            <div id="reset-password-error" class="text-danger small d-none"></div>
+          </div>
+          <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+            <button type="button" class="btn btn-outline-light rounded-3" data-bs-dismiss="modal">Hủy</button>
+            <button type="submit" id="reset-password-submit" class="btn btn-warning rounded-3 fw-bold px-4">
+              <i class="fa-solid fa-floppy-disk me-1"></i> Lưu mật khẩu mới
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: THÊM KHÁCH HÀNG VÉ THÁNG -->
+  <div class="modal fade" id="addMonthlyModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="background: #131f37; border: 1px solid var(--border-color); color: white; border-radius: 16px;">
+        <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+          <h5 class="modal-title fw-bold text-white"><i class="fa-regular fa-id-card text-success me-2"></i> Thêm khách hàng vé tháng</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="form-add-monthly">
+            <div class="mb-3">
+              <label class="small fw-bold text-white mb-1">HỌ TÊN KHÁCH HÀNG (*)</label>
+              <input id="monthly-cust-name" class="form-dark-input" placeholder="Nguyễn Văn A" required>
+            </div>
+            <div class="mb-3">
+              <label class="small fw-bold text-white mb-1">SỐ ĐIỆN THOẠI</label>
+              <input id="monthly-cust-phone" class="form-dark-input" placeholder="0901234567">
+            </div>
+            <div class="mb-3">
+              <label class="small fw-bold text-white mb-1">BIỂN SỐ XE (*)</label>
+              <input id="monthly-cust-plate" class="form-dark-input" placeholder="29A-88888" required>
+            </div>
+            <div class="mb-3">
+              <label class="small fw-bold text-white mb-1">LOẠI XE & KHU VỰC</label>
+              <select id="monthly-cust-type" class="form-dark-input">
+                <option value="XeMay&Khu A">Xe máy • Khu A</option>
+                <option value="Oto&Khu C">Ô tô • Khu C</option>
+                <option value="XeDap&Khu B">Xe đạp • Khu B</option>
+              </select>
+            </div>
+            <div class="mb-4">
+              <label class="small fw-bold text-white mb-1">HẠN SỬ DỤNG (*)</label>
+              <input id="monthly-cust-expiry" type="date" class="form-dark-input" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3" style="background: #0095ff; border: 0;">Lưu thông tin vào CSDL</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GIA HẠN VÉ THÁNG -->
+  <div class="modal fade" id="renewMonthlyModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="background: #131f37; border: 1px solid var(--border-color); color: white; border-radius: 16px;">
+        <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+          <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-arrows-rotate text-info me-2"></i> Gia hạn vé tháng</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="form-renew-monthly">
+            <input type="hidden" id="renew-monthly-id">
+            <div class="mb-3 p-3 rounded-3" style="background: var(--bg-input);">
+              <div class="fw-bold text-white fs-6" id="renew-cust-name">--</div>
+              <div class="text-info small" id="renew-cust-info">--</div>
+              <div class="text-white opacity-75 small mt-1">Hạn hiện tại: <span class="fw-bold text-warning" id="renew-current-expiry">--</span></div>
+            </div>
+
+            <div class="mb-3">
+              <label class="small fw-bold text-white mb-1">GIA HẠN THÊM</label>
+              <select id="renew-months-select" class="form-dark-input" onchange="updateRenewDatePreview()">
+                <option value="1" selected>1 tháng</option>
+                <option value="2">2 tháng</option>
+                <option value="3">3 tháng</option>
+                <option value="6">6 tháng</option>
+                <option value="12">12 tháng (1 năm)</option>
+              </select>
+            </div>
+
+            <div class="mb-4">
+              <label class="small fw-bold text-white mb-1">HOẶC CHỌN NGÀY HẾT HẠN MỚI</label>
+              <input id="renew-new-date" type="date" class="form-dark-input">
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 py-3 fw-bold rounded-3" style="background: #10b981; border: 0;">
+              <i class="fa-solid fa-check me-2"></i> Xác nhận gia hạn
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
