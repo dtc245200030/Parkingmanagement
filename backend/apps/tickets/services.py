@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.utils import timezone
 
 from apps.parking.models import BangGia, KhuVuc, ParkingSpot
-from apps.tickets.models import LuotGuiXe, VeThang, VeXe
+from apps.tickets.models import LuotGuiXe, VeThang
 from apps.users.models import NguoiDung
 from apps.vehicles.models import LoaiXe, PhuongTien
 
@@ -29,7 +29,6 @@ def calculate_fee(loai_xe, thoi_gian_vao, thoi_gian_ra=None, is_monthly=False):
         "Oto7Cho": Decimal("25000"),
         "BICYCLE": Decimal("2000"),
         "XeDap": Decimal("2000"),
-        "XeTai": Decimal("30000"),
     }
 
     pricing = None
@@ -68,8 +67,8 @@ def format_duration(thoi_gian_vao, thoi_gian_ra=None):
     return f"{minutes} phút"
 
 
-def check_in_vehicle(plate_number, vehicle_type_name="XeMay", zone_name=None, staff_user=None, card_code=None):
-    """Thực hiện quy trình ghi nhận xe vào bãi: kiểm tra trùng biển số, kiểm tra sức chứa khu vực và phát hành/kích hoạt thẻ giữ xe."""
+def check_in_vehicle(plate_number, vehicle_type_name="XeMay", zone_name=None, staff_user=None):
+    """Ghi nhận xe vào bãi dựa trên biển số, loại xe và khu vực đỗ."""
     plate_number = plate_number.strip().upper()
 
     # Check if this plate is already active in lot
@@ -93,8 +92,6 @@ def check_in_vehicle(plate_number, vehicle_type_name="XeMay", zone_name=None, st
                 loai_xe = LoaiXe.objects.filter(ten_loai_xe__in=["Oto", "CAR", "Oto4Cho"]).first()
             elif clean_vtype.upper() in ["BICYCLE", "XE_DAP", "XEDAP", "XE ĐẠP", "XE DAP", "BIKE"]:
                 loai_xe = LoaiXe.objects.filter(ten_loai_xe__in=["XeDap", "BICYCLE"]).first()
-            elif clean_vtype.upper() in ["TRUCK", "XE_TAI", "XETAI", "XE TẢI"]:
-                loai_xe = LoaiXe.objects.filter(ten_loai_xe__in=["XeTai", "TRUCK"]).first()
 
     if not loai_xe:
         loai_xe = LoaiXe.objects.filter(ten_loai_xe="XeMay").first() or LoaiXe.objects.first()
@@ -129,22 +126,6 @@ def check_in_vehicle(plate_number, vehicle_type_name="XeMay", zone_name=None, st
         defaults={"loai_xe": loai_xe}
     )
 
-    # Get or create card (VeXe)
-    clean_plate_code = plate_number.replace("-", "").replace(".", "").replace(" ", "")
-    if not card_code or not card_code.strip():
-        card_code = f"CARD-{clean_plate_code}"
-
-    ve_xe = VeXe.objects.filter(ma_dinh_danh_the=card_code).first()
-    if not ve_xe:
-        ve_xe = VeXe.objects.create(
-            ma_dinh_danh_the=card_code,
-            loai_the="Vé lượt",
-            trang_thai_the="Đang gửi"
-        )
-    else:
-        ve_xe.trang_thai_the = "Đang gửi"
-        ve_xe.save()
-
     # Check if there is an active monthly ticket
     today = timezone.now().date()
     monthly_ticket = VeThang.objects.filter(
@@ -153,16 +134,11 @@ def check_in_vehicle(plate_number, vehicle_type_name="XeMay", zone_name=None, st
         ngay_ket_thuc__gte=today
     ).first()
 
-    if monthly_ticket:
-        ve_xe.loai_the = "Vé tháng"
-        ve_xe.save()
-
     # Determine staff user
     if not staff_user:
         staff_user = NguoiDung.objects.filter(trang_thai="Hoạt động").first()
 
     session = LuotGuiXe.objects.create(
-        ve_xe=ve_xe,
         phuong_tien=phuong_tien,
         bien_so_xe_kiem_tra=plate_number,
         loai_xe=loai_xe,
@@ -176,8 +152,8 @@ def check_in_vehicle(plate_number, vehicle_type_name="XeMay", zone_name=None, st
 
 
 def check_out_vehicle(session_id, staff_user=None):
-    """Thực hiện quy trình cho xe ra bãi: tính tiền phí gửi xe, cập nhật thời gian ra và giải phóng trạng thái thẻ."""
-    session = LuotGuiXe.objects.filter(pk=session_id).select_related("ve_xe", "loai_xe", "phuong_tien", "khu_vuc", "nguoi_dung_vao").first()
+    """Cho xe ra bãi, tính phí và cập nhật thời gian hoàn tất lượt gửi."""
+    session = LuotGuiXe.objects.filter(pk=session_id).select_related("loai_xe", "phuong_tien", "khu_vuc", "nguoi_dung_vao").first()
     if not session:
         raise ValueError("Không tìm thấy thông tin lượt gửi xe.")
 
@@ -206,10 +182,4 @@ def check_out_vehicle(session_id, staff_user=None):
     session.tong_tien_phi = calculate_fee(session.loai_xe, session.thoi_gian_vao, now, is_monthly=is_monthly)
     session.save()
 
-    # Free up card
-    if session.ve_xe:
-        session.ve_xe.trang_thai_the = "Sẵn sàng"
-        session.ve_xe.save()
-
     return session
-

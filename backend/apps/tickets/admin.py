@@ -1,16 +1,7 @@
-"""Cấu hình trang quản trị Admin cho Vé xe, Lượt gửi xe và Vé tháng."""
+"""Cấu hình trang quản trị Admin cho Lượt gửi xe và Vé tháng."""
 
 from django.contrib import admin
-from apps.tickets.models import LuotGuiXe, VeThang, VeXe
-
-
-@admin.register(VeXe)
-class VeXeAdmin(admin.ModelAdmin):
-    """Cấu hình trang quản trị Admin cho Thẻ/Vé xe RFID."""
-
-    list_display = ("ma_ve", "ma_dinh_danh_the", "loai_the", "trang_thai_the")
-    list_filter = ("loai_the", "trang_thai_the")
-    search_fields = ("ma_dinh_danh_the",)
+from apps.tickets.models import LuotGuiXe, VeThang
 
 
 @admin.register(LuotGuiXe)
@@ -29,4 +20,3 @@ class VeThangAdmin(admin.ModelAdmin):
     list_display = ("ma_ve_thang", "ho_ten_khach_hang", "phuong_tien", "so_dien_thoai", "ngay_bat_dau", "ngay_ket_thuc", "trang_thai_ve")
     list_filter = ("trang_thai_ve",)
     search_fields = ("ho_ten_khach_hang", "so_dien_thoai", "phuong_tien__bien_so_xe")
-

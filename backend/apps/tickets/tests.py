@@ -7,7 +7,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.parking.models import KhuVuc
-from apps.tickets.models import LuotGuiXe, VeThang, VeXe
+from apps.tickets.models import LuotGuiXe, VeThang
 from apps.tickets.services import check_in_vehicle, check_out_vehicle
 from apps.vehicles.models import LoaiXe, PhuongTien
 
@@ -44,9 +44,7 @@ class TicketsFlowTests(TestCase):
         """Kiểm tra API gia hạn thời hạn vé tháng."""
         client = APIClient()
         pt = PhuongTien.objects.create(bien_so_xe="30A-11111", loai_xe=self.loai_xe)
-        card = VeXe.objects.create(ma_dinh_danh_the="CARD-THANG-30A11111", loai_the="Vé tháng")
         vt = VeThang.objects.create(
-            the_xe=card,
             phuong_tien=pt,
             ho_ten_khach_hang="Nguyen Van A",
             ngay_bat_dau=date.today(),
@@ -61,9 +59,7 @@ class TicketsFlowTests(TestCase):
         """Kiểm tra API xóa vé tháng thành công."""
         client = APIClient()
         pt = PhuongTien.objects.create(bien_so_xe="30A-22222", loai_xe=self.loai_xe)
-        card = VeXe.objects.create(ma_dinh_danh_the="CARD-THANG-30A22222", loai_the="Vé tháng")
         vt = VeThang.objects.create(
-            the_xe=card,
             phuong_tien=pt,
             ho_ten_khach_hang="Nguyen Van B",
             ngay_bat_dau=date.today(),
@@ -73,4 +69,3 @@ class TicketsFlowTests(TestCase):
         response = client.delete(f"/api/tickets/monthly/{vt.ma_ve_thang}/")
         self.assertEqual(response.status_code, 200)
         self.assertFalse(VeThang.objects.filter(pk=vt.ma_ve_thang).exists())
-

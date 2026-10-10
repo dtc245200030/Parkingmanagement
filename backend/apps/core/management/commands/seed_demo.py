@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.parking.models import BangGia, KhuVuc, ParkingSpot
 from apps.reports.models import BaoCaoThongKe
-from apps.tickets.models import LuotGuiXe, VeThang, VeXe
+from apps.tickets.models import LuotGuiXe, VeThang
 from apps.users.models import NguoiDung, VaiTro
 from apps.vehicles.models import LoaiXe, PhuongTien
 
@@ -114,7 +114,6 @@ class Command(BaseCommand):
             ("XeMay", "Xe máy số & tay ga"),
             ("Oto", "Ô tô từ 4 đến 7 chỗ ngồi"),
             ("XeDap", "Xe đạp thể thao & xe đạp điện"),
-            ("XeTai", "Xe tải nhẹ dưới 2.5 tấn"),
         ]
         type_objs = {}
         for code, desc in types_data:
@@ -145,7 +144,7 @@ class Command(BaseCommand):
                 }
             )
 
-        # 6, 7, 8. Bảng PhuongTien, VeXe, LuotGuiXe
+        # 6, 7, 8. Bảng PhuongTien và LuotGuiXe
         self.stdout.write("[6,7,8/10] Khoi tao 12 luot xe dang gui va cac luot da hoan tat...")
         now = timezone.now()
         active_vehicles = [
@@ -168,17 +167,8 @@ class Command(BaseCommand):
         for plate, v_type_code, zone_name, mins_ago, fee in active_vehicles:
             lx = type_objs[v_type_code]
             pt, _ = PhuongTien.objects.get_or_create(bien_so_xe=plate, defaults={"loai_xe": lx})
-            card_code = f"CARD-{plate}"
-            card, _ = VeXe.objects.get_or_create(
-                ma_dinh_danh_the=card_code,
-                defaults={"loai_the": "Vé lượt", "trang_thai_the": "Đang gửi"}
-            )
-            card.trang_thai_the = "Đang gửi"
-            card.save()
-
             in_time = now - timedelta(minutes=mins_ago)
             LuotGuiXe.objects.create(
-                ve_xe=card,
                 phuong_tien=pt,
                 bien_so_xe_kiem_tra=plate,
                 loai_xe=lx,
@@ -207,15 +197,9 @@ class Command(BaseCommand):
         for plate, v_type_code, zone_name, in_mins, dur_mins, fee in past_completed:
             lx = type_objs[v_type_code]
             pt, _ = PhuongTien.objects.get_or_create(bien_so_xe=plate, defaults={"loai_xe": lx})
-            card_code = f"HIST-{plate}"
-            card, _ = VeXe.objects.get_or_create(
-                ma_dinh_danh_the=card_code,
-                defaults={"loai_the": "Vé lượt", "trang_thai_the": "Sẵn sàng"}
-            )
             in_time = now - timedelta(minutes=in_mins)
             out_time = in_time + timedelta(minutes=dur_mins)
             LuotGuiXe.objects.create(
-                ve_xe=card,
                 phuong_tien=pt,
                 bien_so_xe_kiem_tra=plate,
                 loai_xe=lx,
@@ -240,13 +224,7 @@ class Command(BaseCommand):
         for name, phone, plate, v_type_code, start_d, end_d, status_str in monthly_data:
             lx = type_objs[v_type_code]
             pt, _ = PhuongTien.objects.get_or_create(bien_so_xe=plate, defaults={"loai_xe": lx})
-            card_code = f"CARD-THANG-{plate}"
-            card, _ = VeXe.objects.get_or_create(
-                ma_dinh_danh_the=card_code,
-                defaults={"loai_the": "Vé tháng", "trang_thai_the": "Sẵn sàng"}
-            )
             VeThang.objects.update_or_create(
-                the_xe=card,
                 phuong_tien=pt,
                 defaults={
                     "ho_ten_khach_hang": name,

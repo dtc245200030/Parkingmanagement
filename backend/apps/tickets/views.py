@@ -7,13 +7,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.parking.models import KhuVuc
-from apps.tickets.models import LuotGuiXe, VeThang, VeXe
+from apps.tickets.models import LuotGuiXe, VeThang
 from apps.tickets.serializers import (
     CheckInRequestSerializer,
     CheckOutRequestSerializer,
     LuotGuiXeSerializer,
     VeThangSerializer,
-    VeXeSerializer,
 )
 from apps.tickets.services import check_in_vehicle, check_out_vehicle
 from apps.users.models import NguoiDung
@@ -31,7 +30,6 @@ def check_in_api(request):
     plate = serializer.validated_data["plate_number"]
     v_type = serializer.validated_data.get("vehicle_type", "XeMay")
     zone = serializer.validated_data.get("zone", "Khu A")
-    card = serializer.validated_data.get("card_code")
 
     # Determine staff user
     staff_id = serializer.validated_data.get("staff_id") or request.session.get("user_id")
@@ -51,7 +49,6 @@ def check_in_api(request):
             vehicle_type_name=v_type,
             zone_name=zone,
             staff_user=staff,
-            card_code=card,
         )
         return Response(
             {
@@ -119,12 +116,12 @@ def check_out_api(request):
 class LuotGuiXeViewSet(viewsets.ModelViewSet):
     """ViewSet quản lý tìm kiếm, lọc và xem chi tiết danh sách lượt gửi xe."""
 
-    queryset = LuotGuiXe.objects.all().select_related("ve_xe", "loai_xe", "khu_vuc", "phuong_tien", "nguoi_dung_vao", "nguoi_dung_ra").order_by("-thoi_gian_vao")
+    queryset = LuotGuiXe.objects.all().select_related("loai_xe", "khu_vuc", "phuong_tien", "nguoi_dung_vao", "nguoi_dung_ra").order_by("-thoi_gian_vao")
     serializer_class = LuotGuiXeSerializer
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        """Lọc danh sách lượt gửi xe theo trạng thái, khu vực và từ khóa tìm kiếm (biển số/mã thẻ)."""
+        """Lọc danh sách lượt gửi xe theo trạng thái, khu vực và từ khóa tìm kiếm."""
         qs = super().get_queryset()
         status_filter = self.request.query_params.get("status")
         zone_filter = self.request.query_params.get("zone")
@@ -146,7 +143,6 @@ class LuotGuiXeViewSet(viewsets.ModelViewSet):
             qs = qs.filter(
                 Q(bien_so_xe_kiem_tra__icontains=clean_q)
                 | Q(phuong_tien__bien_so_xe__icontains=clean_q)
-                | Q(ve_xe__ma_dinh_danh_the__icontains=clean_q)
                 | Q(nguoi_dung_vao__ho_ten__icontains=search_query)
             )
 
@@ -160,14 +156,10 @@ class LuotGuiXeViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
-        """Xóa thông tin lượt gửi xe và hoàn trả trạng thái thẻ giữ xe."""
+        """Xóa thông tin lượt gửi xe khỏi hệ thống."""
         instance = self.get_object()
         plate = instance.bien_so_xe_kiem_tra
-        the_xe = instance.ve_xe
         self.perform_destroy(instance)
-        if the_xe and the_xe.trang_thai_the == "Đang gửi":
-            the_xe.trang_thai_the = "Sẵn sàng"
-            the_xe.save()
         return Response(
             {
                 "status": "success",
@@ -180,7 +172,7 @@ class LuotGuiXeViewSet(viewsets.ModelViewSet):
 class VeThangViewSet(viewsets.ModelViewSet):
     """ViewSet quản lý CRUD vé tháng và gia hạn thời gian sử dụng."""
 
-    queryset = VeThang.objects.all().select_related("the_xe", "phuong_tien", "phuong_tien__loai_xe").order_by("-ma_ve_thang")
+    queryset = VeThang.objects.all().select_related("phuong_tien", "phuong_tien__loai_xe").order_by("-ma_ve_thang")
     serializer_class = VeThangSerializer
     permission_classes = [AllowAny]
 
@@ -212,16 +204,7 @@ class VeThangViewSet(viewsets.ModelViewSet):
             defaults={"loai_xe": loai_xe}
         )
 
-        # Get or create VeXe
-        clean_plate = plate.replace("-", "").replace(".", "")
-        card_code = f"CARD-THANG-{clean_plate}"
-        the_xe, _ = VeXe.objects.get_or_create(
-            ma_dinh_danh_the=card_code,
-            defaults={"loai_the": "Vé tháng", "trang_thai_the": "Sẵn sàng"}
-        )
-
         ve_thang = VeThang.objects.create(
-            the_xe=the_xe,
             phuong_tien=phuong_tien,
             ho_ten_khach_hang=name,
             so_dien_thoai=phone,
@@ -239,19 +222,11 @@ class VeThangViewSet(viewsets.ModelViewSet):
         )
 
     def destroy(self, request, *args, **kwargs):
-        """Hủy vé tháng và cập nhật loại thẻ giữ xe tương ứng."""
+        """Hủy vé tháng của phương tiện."""
         instance = self.get_object()
         cust_name = instance.ho_ten_khach_hang
         plate = instance.phuong_tien.bien_so_xe if instance.phuong_tien else ""
-        the_xe = instance.the_xe
-        
         self.perform_destroy(instance)
-        
-        # If card is no longer used by any other active pass or session, reset status to 'Sẵn sàng'
-        if the_xe and not VeThang.objects.filter(the_xe=the_xe).exists():
-            the_xe.loai_the = "Vé lượt"
-            the_xe.trang_thai_the = "Sẵn sàng"
-            the_xe.save()
 
         return Response(
             {
@@ -309,11 +284,3 @@ class VeThangViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK,
         )
-
-
-class VeXeViewSet(viewsets.ModelViewSet):
-    """ViewSet quản lý danh mục Thẻ/Vé xe RFID."""
-
-    queryset = VeXe.objects.all().order_by("ma_ve")
-    serializer_class = VeXeSerializer
-    permission_classes = [AllowAny]

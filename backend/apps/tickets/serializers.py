@@ -2,29 +2,18 @@
 
 from rest_framework import serializers
 from apps.parking.serializers import KhuVucSerializer
-from apps.tickets.models import LuotGuiXe, VeThang, VeXe
+from apps.tickets.models import LuotGuiXe, VeThang
 from apps.tickets.services import calculate_fee, format_duration
 from apps.vehicles.serializers import LoaiXeSerializer, PhuongTienSerializer
-
-
-class VeXeSerializer(serializers.ModelSerializer):
-    """Serializer cho mô hình Vé/Thẻ xe."""
-
-    class Meta:
-        model = VeXe
-        fields = ["ma_ve", "ma_dinh_danh_the", "loai_the", "trang_thai_the"]
 
 
 class LuotGuiXeSerializer(serializers.ModelSerializer):
     """Serializer dữ liệu Lượt gửi xe chi tiết phục vụ hiển thị lịch sử và xe đang gửi."""
 
-    ve_xe_detail = VeXeSerializer(source="ve_xe", read_only=True)
     loai_xe_detail = LoaiXeSerializer(source="loai_xe", read_only=True)
     khu_vuc_detail = KhuVucSerializer(source="khu_vuc", read_only=True)
     ten_khu_vuc = serializers.CharField(source="khu_vuc.ten_khu_vuc", read_only=True)
     ten_loai_xe = serializers.CharField(source="loai_xe.ten_loai_xe", read_only=True)
-    ma_the_rfid = serializers.CharField(source="ve_xe.ma_dinh_danh_the", read_only=True)
-    loai_the = serializers.CharField(source="ve_xe.loai_the", read_only=True)
     thoi_gian_gui_text = serializers.SerializerMethodField()
     tien_phi_du_tinh = serializers.SerializerMethodField()
     ten_khach_hang = serializers.SerializerMethodField()
@@ -35,10 +24,6 @@ class LuotGuiXeSerializer(serializers.ModelSerializer):
         model = LuotGuiXe
         fields = [
             "ma_luot_gui",
-            "ve_xe",
-            "ve_xe_detail",
-            "ma_the_rfid",
-            "loai_the",
             "phuong_tien",
             "bien_so_xe_kiem_tra",
             "loai_xe",
@@ -98,19 +83,14 @@ class LuotGuiXeSerializer(serializers.ModelSerializer):
 class VeThangSerializer(serializers.ModelSerializer):
     """Serializer quản lý thông tin đăng ký và gia hạn vé tháng."""
 
-    the_xe_detail = VeXeSerializer(source="the_xe", read_only=True)
     phuong_tien_detail = PhuongTienSerializer(source="phuong_tien", read_only=True)
     bien_so_xe = serializers.CharField(source="phuong_tien.bien_so_xe", read_only=True)
     ten_loai_xe = serializers.CharField(source="phuong_tien.loai_xe.ten_loai_xe", read_only=True)
-    ma_the_rfid = serializers.CharField(source="the_xe.ma_dinh_danh_the", read_only=True)
 
     class Meta:
         model = VeThang
         fields = [
             "ma_ve_thang",
-            "the_xe",
-            "the_xe_detail",
-            "ma_the_rfid",
             "phuong_tien",
             "phuong_tien_detail",
             "bien_so_xe",
@@ -128,7 +108,6 @@ class CheckInRequestSerializer(serializers.Serializer):
     plate_number = serializers.CharField(required=True)
     vehicle_type = serializers.CharField(required=False, default="XeMay")
     zone = serializers.CharField(required=False, default="Khu A")
-    card_code = serializers.CharField(required=False, allow_blank=True, default="")
     staff_id = serializers.IntegerField(required=False, allow_null=True)
     staff_username = serializers.CharField(required=False, allow_blank=True, default="")
 

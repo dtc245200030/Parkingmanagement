@@ -7,7 +7,6 @@
    ParkAI Manager - Enhanced Frontend with Strict Role-based Permissions & Ticket Views
    ======================================================================== */
 
-let selectedRoleType = 'manager';
 let activePanel = 'overview';
 let selectedVehicleTypeVal = 'XeMay';
 let selectedZoneVal = 'Khu A';
@@ -54,47 +53,27 @@ function getCsrfToken() {
 // ------------------------------------------------------------------------
 // Authentication Flow & Role-based UI setup
 // ------------------------------------------------------------------------
-function selectRole(role) {
-  selectedRoleType = role;
-  document.body.classList.toggle('role-manager', role === 'manager');
-  document.body.classList.toggle('role-staff', role !== 'manager');
-  document.getElementById('role-selection-view').classList.add('d-none');
-  document.getElementById('login-view').classList.remove('d-none');
-  
-  const titleEl = document.getElementById('login-role-title');
-  const emailEl = document.getElementById('login-role-email');
-  const iconEl = document.getElementById('login-role-icon');
-
-  if (role === 'manager') {
-    titleEl.textContent = 'Quản lý';
-    emailEl.textContent = 'admin@baidoxe.vn';
-    iconEl.className = 'role-icon-box icon-box-blue';
-    iconEl.innerHTML = '<i class="fa-solid fa-shield-halved"></i>';
-    document.getElementById('login-username').value = 'admin';
-  } else {
-    titleEl.textContent = 'Nhân viên bãi xe';
-    emailEl.textContent = 'mai@baidoxe.vn';
-    iconEl.className = 'role-icon-box icon-box-green';
-    iconEl.innerHTML = '<i class="fa-solid fa-user"></i>';
-    document.getElementById('login-username').value = 'mai';
-  }
-}
-
-function backToRoleSelect() {
-  document.getElementById('login-view').classList.add('d-none');
-  document.getElementById('role-selection-view').classList.remove('d-none');
-}
-
 function togglePasswordVisibility(fieldId = 'login-password', iconId = 'toggle-pwd-btn') {
   const pwd = document.getElementById(fieldId);
-  const icon = document.getElementById(iconId);
+  const toggle = document.getElementById(iconId);
+  const icon = toggle ? toggle.querySelector('i') : null;
+  if (!pwd) return;
   if (pwd.type === 'password') {
     pwd.type = 'text';
-    if (icon) icon.className = 'fa-regular fa-eye-slash position-absolute text-muted';
+    if (icon) icon.className = 'fa-regular fa-eye-slash';
+    if (toggle) {
+      toggle.setAttribute('aria-label', 'Ẩn mật khẩu');
+      toggle.setAttribute('aria-pressed', 'true');
+    }
   } else {
     pwd.type = 'password';
-    if (icon) icon.className = 'fa-regular fa-eye position-absolute text-muted';
+    if (icon) icon.className = 'fa-regular fa-eye';
+    if (toggle) {
+      toggle.setAttribute('aria-label', 'Hiện mật khẩu');
+      toggle.setAttribute('aria-pressed', 'false');
+    }
   }
+  pwd.focus();
 }
 
 function openRegisterModal() {
@@ -146,21 +125,17 @@ function applyRolePermissions(userRole) {
 
   const roleTagEl = document.getElementById('sidebar-role-tag');
   const roleTextEl = document.getElementById('current-user-role-text');
+  if (roleTextEl) {
+    roleTextEl.className = isManager ? 'fw-bold text-info small' : 'fw-bold text-success small';
+    roleTextEl.textContent = isManager ? 'Quản lý hệ thống' : 'Nhân viên bãi xe';
+  }
   if (roleTagEl) {
     if (isManager) {
       roleTagEl.className = 'status-pill bg-primary bg-opacity-25 text-white border border-primary border-opacity-50 mt-1';
       roleTagEl.textContent = 'Toàn quyền quản trị';
-      if (roleTextEl) {
-        roleTextEl.className = 'fw-bold text-info small';
-        roleTextEl.textContent = 'Quản lý hệ thống';
-      }
     } else {
       roleTagEl.className = 'status-pill bg-success bg-opacity-25 text-white border border-success border-opacity-50 mt-1';
       roleTagEl.textContent = 'Nhân viên tác nghiệp';
-      if (roleTextEl) {
-        roleTextEl.className = 'fw-bold text-success small';
-        roleTextEl.textContent = 'Nhân viên bãi xe';
-      }
     }
   }
 
@@ -176,10 +151,40 @@ function applyRolePermissions(userRole) {
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('auth-login-form');
   if (loginForm) {
+    const usernameInput = document.getElementById('login-username');
+    const passwordInput = document.getElementById('login-password');
+    const rememberInput = document.getElementById('remember-username');
+    const loginAlert = document.getElementById('dashboard-login-alert');
+    const submitButton = document.getElementById('dashboard-login-submit');
+    const rememberedUsername = localStorage.getItem('parkai_username');
+
+    if (rememberedUsername) {
+      usernameInput.value = rememberedUsername;
+      rememberInput.checked = true;
+      passwordInput.focus();
+    }
+
+    [usernameInput, passwordInput].forEach(input => {
+      input.addEventListener('input', () => input.closest('.login-field').classList.remove('has-error'));
+    });
+
     loginForm.addEventListener('submit', async function(e) {
       e.preventDefault();
-      const username = document.getElementById('login-username').value.trim();
-      const password = document.getElementById('login-password').value;
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      const emptyInputs = [usernameInput, passwordInput].filter(input => !input.value.trim());
+      [usernameInput, passwordInput].forEach(input => {
+        input.closest('.login-field').classList.toggle('has-error', !input.value.trim());
+      });
+      if (emptyInputs.length) {
+        emptyInputs[0].focus();
+        return;
+      }
+
+      loginAlert.hidden = true;
+      submitButton.disabled = true;
+      submitButton.classList.add('is-loading');
+      submitButton.querySelector('span').textContent = 'Đang xác thực...';
 
       try {
         const res = await fetch('/api/auth/login/', {
@@ -194,6 +199,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         if (res.ok && data.status === 'success') {
           currentUser = data.user;
+          if (rememberInput.checked) localStorage.setItem('parkai_username', username);
+          else localStorage.removeItem('parkai_username');
           document.getElementById('login-view').classList.add('d-none');
           document.getElementById('app-shell-view').classList.remove('d-none');
 
@@ -207,11 +214,19 @@ document.addEventListener('DOMContentLoaded', () => {
           loadAllDataFromDatabase();
           setTimeout(initAllCharts, 200);
         } else {
-          showToast(data.message || 'Đăng nhập không thành công', 'error');
+          loginAlert.innerHTML = '<i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span>';
+          loginAlert.querySelector('span').textContent = data.message || 'Tên tài khoản hoặc mật khẩu không chính xác.';
+          loginAlert.hidden = false;
+          passwordInput.select();
         }
       } catch (err) {
-        // KHÔNG tự đăng nhập khi API lỗi - bắt buộc xác thực qua CSDL
-        showToast('Không thể kết nối máy chủ xác thực. Vui lòng thử lại sau. (' + err.message + ')', 'error');
+        loginAlert.innerHTML = '<i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span></span>';
+        loginAlert.querySelector('span').textContent = 'Không thể kết nối máy chủ. Vui lòng thử lại sau.';
+        loginAlert.hidden = false;
+      } finally {
+        submitButton.disabled = false;
+        submitButton.classList.remove('is-loading');
+        submitButton.querySelector('span').textContent = 'Đăng nhập';
       }
     });
   }
@@ -310,9 +325,13 @@ function logoutApp() {
   }
   fetch('/api/auth/logout/', { method: 'POST', headers: { 'X-CSRFToken': getCsrfToken() } });
   document.getElementById('app-shell-view').classList.add('d-none');
-  document.getElementById('role-selection-view').classList.remove('d-none');
+  document.body.classList.remove('role-manager', 'role-staff');
+  document.getElementById('login-view').classList.remove('d-none');
   const pwdInput = document.getElementById('login-password');
-  if (pwdInput) pwdInput.value = '';
+  if (pwdInput) {
+    pwdInput.value = '';
+    pwdInput.type = 'password';
+  }
 }
 
 function switchNavPanel(panelName) {
@@ -1071,10 +1090,10 @@ function viewTicketDetail(sessionId) {
 
   const inDateStr = session.thoi_gian_vao ? new Date(session.thoi_gian_vao).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '--';
   const outDateStr = session.thoi_gian_ra ? new Date(session.thoi_gian_ra).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Đang gửi trong bãi';
-  const fee = Number(session.tong_tien_phi || session.tien_phi_du_tinh || 0);
+  const isCompleted = session.trang_thai_luot === 'Đã ra';
+  const fee = Number(isCompleted ? session.tong_tien_phi : session.tien_phi_du_tinh || 0);
 
   document.getElementById('ticket-modal-id').textContent = `#LGX-${String(session.ma_luot_gui).padStart(5, '0')}`;
-  document.getElementById('ticket-modal-rfid').textContent = session.ma_the_rfid || `CARD-${session.bien_so_xe_kiem_tra}`;
   document.getElementById('ticket-modal-plate').textContent = session.bien_so_xe_kiem_tra;
   document.getElementById('ticket-modal-vtype').textContent = session.ten_loai_xe || 'Xe máy';
   document.getElementById('ticket-modal-zone').textContent = session.ten_khu_vuc || 'Khu A';
@@ -1087,9 +1106,10 @@ function viewTicketDetail(sessionId) {
   document.getElementById('ticket-modal-staff-out').textContent = session.ten_nhan_vien_ra || (session.trang_thai_luot === 'Đã ra' ? 'Lê Văn Hùng' : 'Chưa ghi nhận (Xe chưa ra)');
 
   document.getElementById('ticket-modal-fee').textContent = `${fee.toLocaleString('vi-VN')} đ`;
+  document.getElementById('ticket-modal-fee-label').textContent = isCompleted ? 'TỔNG PHÍ GỬI XE:' : 'PHÍ GỬI XE TẠM TÍNH:';
   
   const statusEl = document.getElementById('ticket-modal-status');
-  if (session.trang_thai_luot === 'Đã ra') {
+  if (isCompleted) {
     statusEl.className = 'status-pill status-out';
     statusEl.innerHTML = '<i class="fa-solid fa-flag-checkered me-1"></i> Đã hoàn tất & Đã ra';
   } else {
@@ -1112,7 +1132,6 @@ function viewMonthlyTicketDetail(monthlyId) {
   const endStr = m.ngay_ket_thuc ? new Date(m.ngay_ket_thuc).toLocaleDateString('vi-VN') : '--';
 
   document.getElementById('m-ticket-modal-id').textContent = `#VTH-${String(m.ma_ve_thang).padStart(4, '0')}`;
-  document.getElementById('m-ticket-modal-rfid').textContent = m.ma_the_rfid || `CARD-THANG-${m.bien_so_xe}`;
   document.getElementById('m-ticket-modal-name').textContent = m.ho_ten_khach_hang;
   document.getElementById('m-ticket-modal-phone').textContent = m.so_dien_thoai || 'Chưa cập nhật';
   document.getElementById('m-ticket-modal-plate').textContent = m.bien_so_xe;

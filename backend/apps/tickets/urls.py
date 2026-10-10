@@ -5,13 +5,11 @@ from rest_framework.routers import DefaultRouter
 from apps.tickets.views import (
     LuotGuiXeViewSet,
     VeThangViewSet,
-    VeXeViewSet,
     check_in_api,
     check_out_api,
 )
 
 router = DefaultRouter()
-router.register(r"cards", VeXeViewSet, basename="vexe")
 router.register(r"monthly", VeThangViewSet, basename="vethang")
 router.register(r"sessions", LuotGuiXeViewSet, basename="luotguixe")
 router.register(r"", LuotGuiXeViewSet, basename="luotguixe-default")
@@ -22,4 +20,3 @@ urlpatterns = [
     path("in-lot/", LuotGuiXeViewSet.as_view({"get": "in_lot"}), name="tickets-in-lot"),
     path("", include(router.urls)),
 ]
-

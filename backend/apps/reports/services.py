@@ -9,7 +9,7 @@ import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 from apps.parking.models import KhuVuc
-from apps.tickets.models import LuotGuiXe, VeThang, VeXe
+from apps.tickets.models import LuotGuiXe, VeThang
 from apps.users.models import NguoiDung
 
 

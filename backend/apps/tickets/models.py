@@ -1,4 +1,4 @@
-"""Mô hình dữ liệu cho Thẻ/Vé xe (VeXe), Lượt gửi xe (LuotGuiXe) và Vé tháng (VeThang)."""
+"""Mô hình dữ liệu cho Lượt gửi xe (LuotGuiXe) và Vé tháng (VeThang)."""
 
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -9,34 +9,6 @@ from apps.users.models import NguoiDung
 from apps.vehicles.models import LoaiXe, PhuongTien
 
 
-class VeXe(models.Model):
-    """Model quản lý thẻ giữ xe RFID hoặc vé giấy trong hệ thống bãi đỗ."""
-
-    class LoaiThe(models.TextChoices):
-        VE_LUOT = "Vé lượt", "Vé lượt"
-        VE_THANG = "Vé tháng", "Vé tháng"
-
-    class TrangThaiThe(models.TextChoices):
-        SAN_SANG = "Sẵn sàng", "Sẵn sàng"
-        DANG_GUI = "Đang gửi", "Đang gửi"
-        KHOA = "Khóa", "Khóa"
-        HONG = "Hỏng", "Hỏng"
-
-    ma_ve = models.BigAutoField(primary_key=True)
-    ma_dinh_danh_the = models.CharField(max_length=50, unique=True, verbose_name="Mã định danh thẻ (RFID)")
-    loai_the = models.CharField(max_length=20, choices=LoaiThe.choices, default=LoaiThe.VE_LUOT, verbose_name="Loại thẻ")
-    trang_thai_the = models.CharField(max_length=20, choices=TrangThaiThe.choices, default=TrangThaiThe.SAN_SANG, verbose_name="Trạng thái thẻ")
-
-    class Meta:
-        db_table = "VeXe"
-        verbose_name = "Vé xe"
-        verbose_name_plural = "Danh mục Vé xe"
-
-    def __str__(self):
-        """Mô tả chuỗi đại diện cho vé xe."""
-        return f"{self.ma_dinh_danh_the} ({self.loai_the} - {self.trang_thai_the})"
-
-
 class LuotGuiXe(models.Model):
     """Model ghi nhận chi tiết lượt gửi xe vào và ra khỏi bãi."""
 
@@ -45,7 +17,6 @@ class LuotGuiXe(models.Model):
         DA_RA = "Đã ra", "Đã ra"
 
     ma_luot_gui = models.BigAutoField(primary_key=True)
-    ve_xe = models.ForeignKey(VeXe, on_delete=models.PROTECT, related_name="luot_gui_list", verbose_name="Vé xe")
     phuong_tien = models.ForeignKey(PhuongTien, on_delete=models.SET_NULL, null=True, blank=True, related_name="luot_gui_list", verbose_name="Phương tiện")
     bien_so_xe_kiem_tra = models.CharField(max_length=20, verbose_name="Biển số xe")
     loai_xe = models.ForeignKey(LoaiXe, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Loại xe")
@@ -83,7 +54,6 @@ class VeThang(models.Model):
         SAP_HET_HAN = "Sắp hết hạn", "Sắp hết hạn"
 
     ma_ve_thang = models.BigAutoField(primary_key=True)
-    the_xe = models.ForeignKey(VeXe, on_delete=models.PROTECT, related_name="ve_thang_list", verbose_name="Thẻ xe")
     phuong_tien = models.ForeignKey(PhuongTien, on_delete=models.CASCADE, related_name="ve_thang_list", verbose_name="Phương tiện")
     ho_ten_khach_hang = models.CharField(max_length=100, verbose_name="Họ tên khách hàng")
     so_dien_thoai = models.CharField(max_length=20, blank=True, null=True, verbose_name="Số điện thoại")
@@ -102,7 +72,4 @@ class VeThang(models.Model):
         return f"{self.ho_ten_khach_hang} - {self.phuong_tien.bien_so_xe} ({self.trang_thai_ve})"
 
 
-# Backward compatibility aliases
-ParkingTicket = VeXe
 ParkingSession = LuotGuiXe
-

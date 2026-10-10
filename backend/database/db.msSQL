@@ -74,25 +74,11 @@ BEGIN
 END;
 GO
 
--- 6. Bảng VeXe (Vé xe / Thẻ RFID)
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[VeXe]') AND type in (N'U'))
-BEGIN
-    CREATE TABLE [dbo].[VeXe] (
-        [MaVe] INT IDENTITY(1,1) NOT NULL,
-        [MaDinhDanhThe] VARCHAR(50) NOT NULL UNIQUE,
-        [LoaiThe] NVARCHAR(20) NOT NULL CHECK ([LoaiThe] IN (N'Vé lượt', N'Vé tháng')),
-        [TrangThaiThe] NVARCHAR(20) NOT NULL DEFAULT N'Sẵn sàng',
-        CONSTRAINT [PK_VeXe] PRIMARY KEY CLUSTERED ([MaVe] ASC)
-    );
-END;
-GO
-
 -- 7. Bảng LuotGuiXe (Giao dịch xe vào/ra)
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[LuotGuiXe]') AND type in (N'U'))
 BEGIN
     CREATE TABLE [dbo].[LuotGuiXe] (
         [MaLuotGui] INT IDENTITY(1,1) NOT NULL,
-        [MaVe] INT NOT NULL,
         [MaPhuongTien] INT NULL,
         [BienSoXeKiemTra] VARCHAR(20) NOT NULL,
         [MaViTri] INT NULL,
@@ -103,7 +89,6 @@ BEGIN
         [TongTienPhi] DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
         [TrangThaiLuot] VARCHAR(20) NOT NULL DEFAULT 'Đang gửi',
         CONSTRAINT [PK_LuotGuiXe] PRIMARY KEY CLUSTERED ([MaLuotGui] ASC),
-        CONSTRAINT [FK_LuotGuiXe_VeXe] FOREIGN KEY ([MaVe]) REFERENCES [dbo].[VeXe]([MaVe]),
         CONSTRAINT [FK_LuotGuiXe_PhuongTien] FOREIGN KEY ([MaPhuongTien]) REFERENCES [dbo].[PhuongTien]([MaPhuongTien]),
         CONSTRAINT [FK_LuotGuiXe_NguoiDungVao] FOREIGN KEY ([MaNguoiDungVao]) REFERENCES [dbo].[NguoiDung]([MaNguoiDung]),
         CONSTRAINT [FK_LuotGuiXe_NguoiDungRa] FOREIGN KEY ([MaNguoiDungRa]) REFERENCES [dbo].[NguoiDung]([MaNguoiDung]),
@@ -135,7 +120,6 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Ve
 BEGIN
     CREATE TABLE [dbo].[VeThang] (
         [MaVeThang] INT IDENTITY(1,1) NOT NULL,
-        [MaThe] INT NOT NULL,
         [MaPhuongTien] INT NOT NULL,
         [HoTenKhachHang] NVARCHAR(100) NOT NULL,
         [SoDienThoai] VARCHAR(20) NULL,
@@ -144,7 +128,6 @@ BEGIN
         [MoiGiaHan] BIT NOT NULL DEFAULT 1,
         [TrangThaiVe] NVARCHAR(20) NOT NULL DEFAULT N'Còn hiệu lực',
         CONSTRAINT [PK_VeThang] PRIMARY KEY CLUSTERED ([MaVeThang] ASC),
-        CONSTRAINT [FK_VeThang_VeXe] FOREIGN KEY ([MaThe]) REFERENCES [dbo].[VeXe]([MaVe]),
         CONSTRAINT [FK_VeThang_PhuongTien] FOREIGN KEY ([MaPhuongTien]) REFERENCES [dbo].[PhuongTien]([MaPhuongTien]),
         CONSTRAINT [CK_VeThang_Ngay] CHECK ([NgayKetThuc] >= [NgayBatDau])
     );
