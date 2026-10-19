@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Django
+backend/.env
+backend/database/*.sqlite3
+backend/staticfiles/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+.pnpm-store/
+
+# Local runtime output
+.runtime/
+
+# IDE / operating system
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+"backend/.env"

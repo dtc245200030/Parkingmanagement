@@ -96,23 +96,18 @@ def check_in_vehicle(plate_number, vehicle_type_name="XeMay", zone_name=None, st
     if not loai_xe:
         loai_xe = LoaiXe.objects.filter(ten_loai_xe="XeMay").first() or LoaiXe.objects.first()
 
-    # Determine KhuVuc
-    khu_vuc = None
-    if zone_name:
-        clean_zone = zone_name.strip()
-        khu_vuc = KhuVuc.objects.filter(ten_khu_vuc__iexact=clean_zone).first()
-        if not khu_vuc:
-            last_char = clean_zone[-1].upper() if clean_zone else "A"
-            khu_vuc = KhuVuc.objects.filter(ten_khu_vuc__icontains=last_char).first()
-
+    # Phân khu cố định để dễ quản lý: A = ô tô, B = xe máy, C = xe đạp.
+    # Không nhận khu do giao diện gửi lên nếu khu đó không đúng loại phương tiện.
+    v_name = loai_xe.ten_loai_xe if loai_xe else "XeMay"
+    if "Oto" in v_name or "CAR" in v_name:
+        required_zone_name = "Khu A"
+    elif "XeDap" in v_name or "BICYCLE" in v_name:
+        required_zone_name = "Khu C"
+    else:
+        required_zone_name = "Khu B"
+    khu_vuc = KhuVuc.objects.filter(ten_khu_vuc=required_zone_name).first()
     if not khu_vuc:
-        v_name = loai_xe.ten_loai_xe if loai_xe else "XeMay"
-        if "XeMay" in v_name or "MOTORBIKE" in v_name:
-            khu_vuc = KhuVuc.objects.filter(ten_khu_vuc="Khu A").first() or KhuVuc.objects.first()
-        elif "Oto" in v_name or "CAR" in v_name:
-            khu_vuc = KhuVuc.objects.filter(ten_khu_vuc="Khu C").first() or KhuVuc.objects.first()
-        else:
-            khu_vuc = KhuVuc.objects.filter(ten_khu_vuc="Khu B").first() or KhuVuc.objects.first()
+        raise ValueError(f"Chưa cấu hình {required_zone_name} cho loại phương tiện này.")
 
     # Check zone capacity
     if khu_vuc:
@@ -127,10 +122,22 @@ def check_in_vehicle(plate_number, vehicle_type_name="XeMay", zone_name=None, st
     )
 
     # Check if there is an active monthly ticket
-    today = timezone.now().date()
+    today = timezone.localdate()
+    # Đồng bộ trạng thái các vé đã quá hạn để danh sách quản lý không còn
+    # hiển thị "Còn hiệu lực" trong khi việc nhận diện xe vào đã từ chối vé.
+    VeThang.objects.filter(
+        phuong_tien=phuong_tien,
+        ngay_ket_thuc__lt=today,
+    ).exclude(trang_thai_ve=VeThang.TrangThaiVe.HET_HAN).update(
+        trang_thai_ve=VeThang.TrangThaiVe.HET_HAN
+    )
     monthly_ticket = VeThang.objects.filter(
         phuong_tien=phuong_tien,
-        trang_thai_ve="Còn hiệu lực",
+        trang_thai_ve__in=[
+            VeThang.TrangThaiVe.CON_HIEU_LUC,
+            VeThang.TrangThaiVe.SAP_HET_HAN,
+        ],
+        ngay_bat_dau__lte=today,
         ngay_ket_thuc__gte=today
     ).first()
 
@@ -143,6 +150,8 @@ def check_in_vehicle(plate_number, vehicle_type_name="XeMay", zone_name=None, st
         bien_so_xe_kiem_tra=plate_number,
         loai_xe=loai_xe,
         khu_vuc=khu_vuc,
+        ve_thang=monthly_ticket,
+        la_ve_thang=monthly_ticket is not None,
         thoi_gian_vao=timezone.now(),
         nguoi_dung_vao=staff_user,
         trang_thai_luot="Đang gửi",
@@ -169,15 +178,9 @@ def check_out_vehicle(session_id, staff_user=None):
     elif not session.nguoi_dung_ra:
         session.nguoi_dung_ra = session.nguoi_dung_vao or NguoiDung.objects.first()
 
-    # Check if monthly pass
-    today = now.date()
-    is_monthly = False
-    if session.phuong_tien:
-        is_monthly = VeThang.objects.filter(
-            phuong_tien=session.phuong_tien,
-            trang_thai_ve="Còn hiệu lực",
-            ngay_ket_thuc__gte=today
-        ).exists()
+    # Dùng kết quả đã ghi nhận lúc xe vào để quyền lợi vé tháng không
+    # thay đổi trong thời gian phương tiện đang ở trong bãi.
+    is_monthly = session.la_ve_thang
 
     session.tong_tien_phi = calculate_fee(session.loai_xe, session.thoi_gian_vao, now, is_monthly=is_monthly)
     session.save()

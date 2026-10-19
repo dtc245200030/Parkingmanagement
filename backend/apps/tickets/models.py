@@ -22,6 +22,8 @@ class LuotGuiXe(models.Model):
     loai_xe = models.ForeignKey(LoaiXe, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Loại xe")
     khu_vuc = models.ForeignKey(KhuVuc, on_delete=models.PROTECT, null=True, blank=True, related_name="luot_gui_list", verbose_name="Khu vực")
     vi_tri = models.ForeignKey(ParkingSpot, on_delete=models.SET_NULL, null=True, blank=True, related_name="luot_gui_list", verbose_name="Vị trí đỗ")
+    ve_thang = models.ForeignKey("VeThang", on_delete=models.SET_NULL, null=True, blank=True, related_name="luot_gui_list", verbose_name="Vé tháng áp dụng")
+    la_ve_thang = models.BooleanField(default=False, verbose_name="Lượt gửi sử dụng vé tháng")
     thoi_gian_vao = models.DateTimeField(default=timezone.now, verbose_name="Thời gian vào")
     thoi_gian_ra = models.DateTimeField(null=True, blank=True, verbose_name="Thời gian ra")
     nguoi_dung_vao = models.ForeignKey(NguoiDung, on_delete=models.PROTECT, related_name="luot_vao_list", verbose_name="Nhân viên ghi nhận vào", null=True, blank=True)

@@ -647,6 +647,103 @@ body {
   border: 1px solid #1f3458;
 }
 
+.ticket-modal-dialog {
+  width: min(820px, calc(100vw - 24px));
+  max-width: 820px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.ticket-modal-content {
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
+}
+
+.ticket-modal-header {
+  padding: 12px 20px;
+}
+
+.ticket-modal-body {
+  padding: 14px 18px;
+  overflow: hidden;
+}
+
+.ticket-plate-card {
+  padding: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.ticket-plate-number {
+  margin: 2px 0;
+  font-size: clamp(1.9rem, 5vh, 2.65rem);
+  line-height: 1.05;
+}
+
+.ticket-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ticket-info-grid .ticket-row-box {
+  min-width: 0;
+}
+
+.ticket-info-grid .ticket-payment-box {
+  grid-column: 1 / -1;
+}
+
+.ticket-modal-footer {
+  padding: 9px 18px;
+}
+
+.checkin-zone-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.checkin-zone-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  color: #fff;
+  text-align: left;
+  background: #0e1a32;
+  border: 1px solid #294162;
+  border-radius: 12px;
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.checkin-zone-option:hover {
+  border-color: #38bdf8;
+  background: #122747;
+}
+
+.checkin-zone-option.active {
+  border-color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.16);
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.12);
+}
+
+.checkin-zone-option strong,
+.checkin-zone-option small {
+  display: block;
+}
+
+/* Khu D đã được hợp nhất vào Khu A; ẩn các khối giao diện cũ còn trong mẫu. */
+.col-md-6:has(#zone-d-count),
+.col-md-6:has(.badge-zone-d) {
+  display: none !important;
+}
+
+.checkin-zone-option small {
+  margin-top: 2px;
+  color: #94a3b8;
+  font-size: 0.7rem;
+}
+
 .ticket-label-text {
   color: #93c5fd;
   font-size: 0.88rem;
@@ -667,6 +764,111 @@ body {
 .ticket-staff-row-out {
   background: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.ticket-type-row {
+  border-color: rgba(56, 189, 248, 0.42);
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.12), rgba(14, 26, 50, 0.95));
+}
+
+.ticket-type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.ticket-type-single {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.55);
+}
+
+.ticket-type-monthly {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(16, 185, 129, 0.55);
+}
+
+.ticket-type-note {
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.ticket-payment-box {
+  background: #172a50;
+  border: 2px solid #f59e0b;
+}
+
+.ticket-payment-box.ticket-payment-monthly {
+  background: rgba(6, 78, 59, 0.32);
+  border-color: #10b981;
+}
+
+@media (max-width: 575.98px) {
+  .ticket-modal-dialog {
+    width: calc(100vw - 12px);
+    margin: 6px auto;
+  }
+
+  .ticket-modal-content {
+    max-height: calc(100vh - 12px);
+  }
+
+  .ticket-modal-header {
+    padding: 9px 12px;
+  }
+
+  .ticket-modal-body {
+    padding: 8px 10px;
+  }
+
+  .ticket-plate-card {
+    padding: 7px 10px;
+    margin-bottom: 7px;
+  }
+
+  .ticket-info-grid {
+    gap: 5px;
+  }
+
+  .ticket-row-box {
+    padding: 7px 9px;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .ticket-label-text,
+  .ticket-value-text,
+  .ticket-row-box .fs-6 {
+    font-size: 0.76rem !important;
+  }
+
+  .ticket-type-note {
+    font-size: 0.64rem;
+  }
+
+  .ticket-type-badge {
+    min-width: 74px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+  }
+
+  .ticket-modal-footer {
+    padding: 7px 10px;
+  }
+
+  .ticket-row-box > :last-child {
+    max-width: 58%;
+    text-align: right;
+  }
 }
 
 #global-toast {

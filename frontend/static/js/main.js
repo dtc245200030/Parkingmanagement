@@ -9,7 +9,7 @@
 
 let activePanel = 'overview';
 let selectedVehicleTypeVal = 'XeMay';
-let selectedZoneVal = 'Khu A';
+let selectedZoneVal = 'Khu B';
 
 let currentUser = {
   id: 1,
@@ -533,7 +533,7 @@ function renderInLotAccordion() {
 
   const zones = (summaryMetrics.zone_stats && summaryMetrics.zone_stats.length)
     ? summaryMetrics.zone_stats.map(z => z.code)
-    : ['A', 'B', 'C', 'D'];
+    : ['A', 'B', 'C'];
   let html = '';
 
   zones.forEach(z => {
@@ -963,6 +963,7 @@ function quickSetPlate(plateStr, vType, zoneLetter) {
   if (typeCard) {
     selectVehicleType(typeCard, vType, '');
   }
+  if (zoneLetter) selectCheckinZone(zoneLetter);
 }
 
 async function handleVehicleCheckOut(e) {
@@ -1054,23 +1055,64 @@ function selectVehicleType(el, type, priceText) {
   document.querySelectorAll('.vehicle-type-select-card').forEach(c => c.classList.remove('active'));
   if (el) el.classList.add('active');
   
-  const zoneBadge = document.getElementById('selected-zone-badge');
-  const zoneText = document.getElementById('selected-zone-text');
-
   if (type === 'XeMay' || type === 'MOTORBIKE') {
-    if (zoneBadge) { zoneBadge.textContent = 'A'; zoneBadge.className = 'zone-badge badge-zone-a'; }
-    if (zoneText) zoneText.textContent = 'Khu A';
-    selectedZoneVal = 'Khu A';
+    renderCheckinZoneOptions(['B'], 'B');
   } else if (type === 'Oto' || type === 'CAR') {
-    if (zoneBadge) { zoneBadge.textContent = 'C'; zoneBadge.className = 'zone-badge badge-zone-c'; }
-    if (zoneText) zoneText.textContent = 'Khu C';
-    selectedZoneVal = 'Khu C';
+    renderCheckinZoneOptions(['A'], 'A');
   } else {
-    if (zoneBadge) { zoneBadge.textContent = 'B'; zoneBadge.className = 'zone-badge badge-zone-b'; }
-    if (zoneText) zoneText.textContent = 'Khu B';
-    selectedZoneVal = 'Khu B';
+    renderCheckinZoneOptions(['C'], 'C');
   }
 }
+
+function renderCheckinZoneOptions(zoneLetters, suggestedZone) {
+  const container = document.getElementById('checkin-zone-options');
+  if (!container) {
+    updateSelectedCheckinZone(suggestedZone);
+    return;
+  }
+
+  container.innerHTML = zoneLetters.map(letter => `
+    <button type="button" class="checkin-zone-option ${letter === suggestedZone ? 'active' : ''}"
+            data-zone="${letter}" onclick="selectCheckinZone('${letter}')">
+      <span class="zone-badge badge-zone-${letter.toLowerCase()}">${letter}</span>
+      <span>
+        <strong>Khu ${letter}</strong>
+        <small>${letter === suggestedZone ? 'Đề xuất tự động' : 'Có thể lựa chọn'}</small>
+      </span>
+    </button>
+  `).join('');
+
+  selectCheckinZone(suggestedZone);
+}
+
+function selectCheckinZone(zoneLetter) {
+  const option = document.querySelector(`.checkin-zone-option[data-zone="${zoneLetter}"]`);
+  if (option) {
+    document.querySelectorAll('.checkin-zone-option').forEach(item => item.classList.remove('active'));
+    option.classList.add('active');
+  }
+
+  updateSelectedCheckinZone(zoneLetter);
+}
+
+function updateSelectedCheckinZone(zoneLetter) {
+  const normalizedZone = zoneLetter.toUpperCase();
+  const zoneBadge = document.getElementById('selected-zone-badge');
+  const zoneText = document.getElementById('selected-zone-text');
+  if (zoneBadge) {
+    zoneBadge.textContent = normalizedZone;
+    zoneBadge.className = `zone-badge badge-zone-${normalizedZone.toLowerCase()}`;
+  }
+  if (zoneText) zoneText.textContent = `Khu ${normalizedZone}`;
+  selectedZoneVal = `Khu ${normalizedZone}`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const activeVehicleType = document.querySelector('.vehicle-type-select-card.active');
+  if (activeVehicleType) {
+    selectVehicleType(activeVehicleType, activeVehicleType.dataset.type || 'XeMay', '');
+  }
+});
 
 // ------------------------------------------------------------------------
 // View Ticket Details Modal (Vé lượt with Staff Names & Vé tháng)
@@ -1100,13 +1142,37 @@ function viewTicketDetail(sessionId) {
   document.getElementById('ticket-modal-intime').textContent = inDateStr;
   document.getElementById('ticket-modal-outtime').textContent = outDateStr;
   document.getElementById('ticket-modal-duration').textContent = session.thoi_gian_gui_text || '--';
+
+  const isMonthlyTicket = Boolean(session.la_ve_thang);
+  const ticketTypeEl = document.getElementById('ticket-modal-ticket-type');
+  const ticketTypeNoteEl = document.getElementById('ticket-modal-ticket-note');
+  if (ticketTypeEl) {
+    ticketTypeEl.textContent = session.loai_ve_text || (isMonthlyTicket ? 'Vé tháng' : 'Vé lượt');
+    ticketTypeEl.className = `ticket-type-badge ${isMonthlyTicket ? 'ticket-type-monthly' : 'ticket-type-single'}`;
+  }
+  if (ticketTypeNoteEl) {
+    ticketTypeNoteEl.textContent = session.ghi_chu_loai_ve || (isMonthlyTicket
+      ? (session.ten_khach_hang && session.ten_khach_hang !== 'Khách vãng lai'
+          ? `Khách hàng: ${session.ten_khach_hang}`
+          : 'Đã xác nhận vé còn hiệu lực')
+      : 'Tính phí theo thời gian gửi');
+  }
   
   // Specific Staff Names from CSDL
   document.getElementById('ticket-modal-staff-in').textContent = session.ten_nhan_vien_vao || 'Trần Thị Mai (Trực ca)';
   document.getElementById('ticket-modal-staff-out').textContent = session.ten_nhan_vien_ra || (session.trang_thai_luot === 'Đã ra' ? 'Lê Văn Hùng' : 'Chưa ghi nhận (Xe chưa ra)');
 
-  document.getElementById('ticket-modal-fee').textContent = `${fee.toLocaleString('vi-VN')} đ`;
-  document.getElementById('ticket-modal-fee-label').textContent = isCompleted ? 'TỔNG PHÍ GỬI XE:' : 'PHÍ GỬI XE TẠM TÍNH:';
+  const feeEl = document.getElementById('ticket-modal-fee');
+  const feeLabelEl = document.getElementById('ticket-modal-fee-label');
+  const paymentBoxEl = document.getElementById('ticket-modal-payment-box');
+  feeEl.textContent = `${fee.toLocaleString('vi-VN')} đ`;
+  feeEl.className = `fw-extrabold fs-4 ${isMonthlyTicket ? 'text-success' : 'text-warning'}`;
+  feeLabelEl.textContent = isMonthlyTicket
+    ? 'VÉ THÁNG - KHÔNG THU PHÍ:'
+    : (isCompleted ? 'TỔNG PHÍ GỬI XE:' : 'PHÍ GỬI XE TẠM TÍNH:');
+  if (paymentBoxEl) {
+    paymentBoxEl.classList.toggle('ticket-payment-monthly', isMonthlyTicket);
+  }
   
   const statusEl = document.getElementById('ticket-modal-status');
   if (isCompleted) {
@@ -1513,14 +1579,14 @@ async function initAllCharts() {
   const ctpStat4 = document.getElementById('statZoneDoughnutChart');
   if (ctpStat4) {
     if (zoneDoughnutChartInst) zoneDoughnutChartInst.destroy();
-    const zoneDist = chartData && chartData.zone_distribution ? chartData.zone_distribution.data : [0, 0, 0, 0];
+    const zoneDist = chartData && chartData.zone_distribution ? chartData.zone_distribution.data.slice(0, 3) : [0, 0, 0];
     zoneDoughnutChartInst = new Chart(ctpStat4, {
       type: 'doughnut',
       data: {
-        labels: ['Khu A', 'Khu B', 'Khu C', 'Khu D'],
+        labels: ['Khu A', 'Khu B', 'Khu C'],
         datasets: [{
           data: zoneDist,
-          backgroundColor: ['#0095ff', '#10b981', '#8b5cf6', '#f59e0b'],
+          backgroundColor: ['#0095ff', '#10b981', '#8b5cf6'],
           borderWidth: 0
         }]
       },

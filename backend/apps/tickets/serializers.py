@@ -1,5 +1,6 @@
 """Serializers cho Vé xe, Lượt gửi xe và Vé tháng."""
 
+from django.utils import timezone
 from rest_framework import serializers
 from apps.parking.serializers import KhuVucSerializer
 from apps.tickets.models import LuotGuiXe, VeThang
@@ -19,6 +20,9 @@ class LuotGuiXeSerializer(serializers.ModelSerializer):
     ten_khach_hang = serializers.SerializerMethodField()
     ten_nhan_vien_vao = serializers.SerializerMethodField()
     ten_nhan_vien_ra = serializers.SerializerMethodField()
+    loai_ve_text = serializers.SerializerMethodField()
+    thanh_toan_text = serializers.SerializerMethodField()
+    ghi_chu_loai_ve = serializers.SerializerMethodField()
 
     class Meta:
         model = LuotGuiXe
@@ -33,6 +37,9 @@ class LuotGuiXeSerializer(serializers.ModelSerializer):
             "khu_vuc_detail",
             "ten_khu_vuc",
             "vi_tri",
+            "ve_thang",
+            "la_ve_thang",
+            "loai_ve_text",
             "thoi_gian_vao",
             "thoi_gian_ra",
             "thoi_gian_gui_text",
@@ -44,6 +51,8 @@ class LuotGuiXeSerializer(serializers.ModelSerializer):
             "tong_tien_phi",
             "trang_thai_luot",
             "ten_khach_hang",
+            "thanh_toan_text",
+            "ghi_chu_loai_ve",
         ]
 
     def get_thoi_gian_gui_text(self, obj):
@@ -54,7 +63,7 @@ class LuotGuiXeSerializer(serializers.ModelSerializer):
         """Tính số tiền phí tạm tính hiện tại dựa trên bảng giá và thời gian gửi."""
         if obj.trang_thai_luot == "Đã ra":
             return float(obj.tong_tien_phi)
-        return float(calculate_fee(obj.loai_xe, obj.thoi_gian_vao))
+        return float(calculate_fee(obj.loai_xe, obj.thoi_gian_vao, is_monthly=obj.la_ve_thang))
 
     def get_ten_khach_hang(self, obj):
         """Lấy tên khách hàng nếu sở hữu vé tháng hoặc trả về 'Khách vãng lai'."""
@@ -78,6 +87,39 @@ class LuotGuiXeSerializer(serializers.ModelSerializer):
             return obj.nguoi_dung_vao.ho_ten if obj.nguoi_dung_vao else "Lê Văn Hùng"
         return "Chưa ghi nhận (Xe đang gửi)"
 
+    def get_loai_ve_text(self, obj):
+        """Hiển thị loại vé được xác định khi xe vào bãi."""
+        return "Vé tháng" if obj.la_ve_thang else "Vé lượt"
+
+    def get_thanh_toan_text(self, obj):
+        """Giải thích tình trạng thanh toán bằng ngôn ngữ dễ hiểu."""
+        if obj.la_ve_thang:
+            return "Miễn phí do sử dụng vé tháng còn hiệu lực"
+        if obj.trang_thai_luot == "Đã ra":
+            return f"Đã thanh toán {obj.tong_tien_phi:,.0f} đồng"
+        return "Chưa thanh toán"
+
+    def get_ghi_chu_loai_ve(self, obj):
+        """Giải thích vì sao biển số có đăng ký vé tháng vẫn được tính vé lượt."""
+        if obj.la_ve_thang:
+            if obj.ve_thang:
+                return f"Khách hàng: {obj.ve_thang.ho_ten_khach_hang}"
+            return "Đã xác nhận vé còn hiệu lực"
+
+        if not obj.phuong_tien:
+            return "Tính phí theo thời gian gửi"
+
+        ticket = VeThang.objects.filter(phuong_tien=obj.phuong_tien).order_by("-ngay_ket_thuc").first()
+        if not ticket:
+            return "Chưa đăng ký vé tháng"
+
+        entry_date = timezone.localtime(obj.thoi_gian_vao).date()
+        if ticket.ngay_ket_thuc < entry_date:
+            return f"Vé tháng đã hết hạn ngày {ticket.ngay_ket_thuc:%d/%m/%Y}"
+        if ticket.ngay_bat_dau > entry_date:
+            return f"Vé tháng có hiệu lực từ ngày {ticket.ngay_bat_dau:%d/%m/%Y}"
+        return "Vé tháng không ở trạng thái sử dụng"
+
 
 
 class VeThangSerializer(serializers.ModelSerializer):
@@ -86,6 +128,7 @@ class VeThangSerializer(serializers.ModelSerializer):
     phuong_tien_detail = PhuongTienSerializer(source="phuong_tien", read_only=True)
     bien_so_xe = serializers.CharField(source="phuong_tien.bien_so_xe", read_only=True)
     ten_loai_xe = serializers.CharField(source="phuong_tien.loai_xe.ten_loai_xe", read_only=True)
+    trang_thai_ve = serializers.SerializerMethodField()
 
     class Meta:
         model = VeThang
@@ -102,6 +145,15 @@ class VeThangSerializer(serializers.ModelSerializer):
             "moi_gia_han",
             "trang_thai_ve",
         ]
+
+    def get_trang_thai_ve(self, obj):
+        """Trạng thái hiển thị luôn phản ánh đúng thời hạn tại ngày hiện tại."""
+        today = timezone.localdate()
+        if obj.ngay_ket_thuc < today:
+            return VeThang.TrangThaiVe.HET_HAN
+        if obj.ngay_bat_dau > today:
+            return "Chưa có hiệu lực"
+        return obj.trang_thai_ve
 
 
 class CheckInRequestSerializer(serializers.Serializer):

@@ -18,27 +18,60 @@ class TicketsFlowTests(TestCase):
     def setUp(self):
         """Khởi tạo dữ liệu mẫu cho Loại xe và Khu vực."""
         self.loai_xe = LoaiXe.objects.create(ten_loai_xe="XeMay", mo_ta="Xe may")
-        self.khu_vuc = KhuVuc.objects.create(ten_khu_vuc="Khu A", suc_chua_toi_da=120)
+        KhuVuc.objects.create(ten_khu_vuc="Khu A", suc_chua_toi_da=120)
+        self.khu_vuc = KhuVuc.objects.create(ten_khu_vuc="Khu B", suc_chua_toi_da=120)
+        KhuVuc.objects.create(ten_khu_vuc="Khu C", suc_chua_toi_da=120)
 
     def test_check_in_vehicle_creates_active_session(self):
         """Kiểm tra quy trình check-in tạo thành công lượt xe trạng thái 'Đang gửi'."""
-        session = check_in_vehicle(plate_number="29A-99999", vehicle_type_name="XeMay", zone_name="Khu A")
+        session = check_in_vehicle(plate_number="29A-99999", vehicle_type_name="XeMay", zone_name="Khu B")
         self.assertEqual(session.trang_thai_luot, "Đang gửi")
         self.assertEqual(session.bien_so_xe_kiem_tra, "29A-99999")
-        self.assertEqual(session.khu_vuc.ten_khu_vuc, "Khu A")
+        self.assertEqual(session.khu_vuc.ten_khu_vuc, "Khu B")
+
+    def test_vehicle_types_are_assigned_to_three_fixed_zones(self):
+        """Ô tô vào A, xe máy vào B và xe đạp vào C dù phía gửi lên chọn sai khu."""
+        LoaiXe.objects.create(ten_loai_xe="Oto", mo_ta="O to")
+        LoaiXe.objects.create(ten_loai_xe="XeDap", mo_ta="Xe dap")
+
+        car = check_in_vehicle("30A-10001", "Oto", "Khu D")
+        motorbike = check_in_vehicle("29A-10002", "XeMay", "Khu A")
+        bicycle = check_in_vehicle("XD-10003", "XeDap", "Khu B")
+
+        self.assertEqual(car.khu_vuc.ten_khu_vuc, "Khu A")
+        self.assertEqual(motorbike.khu_vuc.ten_khu_vuc, "Khu B")
+        self.assertEqual(bicycle.khu_vuc.ten_khu_vuc, "Khu C")
 
     def test_cannot_check_in_duplicate_plate(self):
         """Kiểm tra không thể check-in lại cho xe đang gửi trong bãi."""
-        check_in_vehicle(plate_number="29A-99999", vehicle_type_name="XeMay", zone_name="Khu A")
+        check_in_vehicle(plate_number="29A-99999", vehicle_type_name="XeMay", zone_name="Khu B")
         with self.assertRaises(ValueError):
-            check_in_vehicle(plate_number="29A-99999", vehicle_type_name="XeMay", zone_name="Khu A")
+            check_in_vehicle(plate_number="29A-99999", vehicle_type_name="XeMay", zone_name="Khu B")
 
     def test_check_out_vehicle(self):
         """Kiểm tra quy trình check-out cho xe ra bãi và chuyển trạng thái 'Đã ra'."""
-        session = check_in_vehicle(plate_number="29A-88888", vehicle_type_name="XeMay", zone_name="Khu A")
+        session = check_in_vehicle(plate_number="29A-88888", vehicle_type_name="XeMay", zone_name="Khu B")
         out_session = check_out_vehicle(session.ma_luot_gui)
         self.assertEqual(out_session.trang_thai_luot, "Đã ra")
         self.assertIsNotNone(out_session.thoi_gian_ra)
+
+    def test_monthly_ticket_is_detected_at_check_in_and_free_at_check_out(self):
+        """Xe có vé tháng hợp lệ được ghi nhận lúc vào và miễn phí lúc ra."""
+        vehicle = PhuongTien.objects.create(bien_so_xe="30A-33333", loai_xe=self.loai_xe)
+        monthly_ticket = VeThang.objects.create(
+            phuong_tien=vehicle,
+            ho_ten_khach_hang="Nguyen Van C",
+            ngay_bat_dau=date.today(),
+            ngay_ket_thuc=date.today() + timedelta(days=30),
+            trang_thai_ve="Còn hiệu lực",
+        )
+
+        session = check_in_vehicle(plate_number="30A-33333", vehicle_type_name="XeMay", zone_name="Khu B")
+        self.assertTrue(session.la_ve_thang)
+        self.assertEqual(session.ve_thang, monthly_ticket)
+
+        out_session = check_out_vehicle(session.ma_luot_gui)
+        self.assertEqual(out_session.tong_tien_phi, Decimal("0.00"))
 
     def test_renew_monthly_ticket(self):
         """Kiểm tra API gia hạn thời hạn vé tháng."""

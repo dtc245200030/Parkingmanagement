@@ -50,10 +50,11 @@ def check_in_api(request):
             zone_name=zone,
             staff_user=staff,
         )
+        ticket_note = " (vé tháng còn hiệu lực)" if session.la_ve_thang else " (vé lượt)"
         return Response(
             {
                 "status": "success",
-                "message": f"Ghi nhận xe {session.bien_so_xe_kiem_tra} vào {session.khu_vuc.ten_khu_vuc if session.khu_vuc else 'bãi'} thành công!",
+                "message": f"Ghi nhận xe {session.bien_so_xe_kiem_tra} vào {session.khu_vuc.ten_khu_vuc if session.khu_vuc else 'bãi'} thành công{ticket_note}!",
                 "session": LuotGuiXeSerializer(session).data,
             },
             status=status.HTTP_201_CREATED,
@@ -99,10 +100,11 @@ def check_out_api(request):
 
     try:
         session = check_out_vehicle(session_id=session_id, staff_user=staff)
+        payment_message = "Vé tháng còn hiệu lực - không thu phí" if session.la_ve_thang else f"Phí thu: {session.tong_tien_phi:,.0f} đ"
         return Response(
             {
                 "status": "success",
-                "message": f"Xe {session.bien_so_xe_kiem_tra} đã ra bãi. Phí thu: {session.tong_tien_phi:,.0f} đ",
+                "message": f"Xe {session.bien_so_xe_kiem_tra} đã ra bãi. {payment_message}",
                 "session": LuotGuiXeSerializer(session).data,
             },
             status=status.HTTP_200_OK,
