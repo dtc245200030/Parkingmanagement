@@ -10,6 +10,7 @@ urlpatterns = [
     path("login/", TemplateView.as_view(template_name="authentication/login.html"), name="login-page"),
     path("health/", include("apps.core.urls")),
     path("api/auth/", include("apps.authentication.urls")),
+    path("api/system/", include("apps.core.api_urls")),
     path("api/users/", include("apps.users.urls")),
     path("api/vehicle-types/", include("apps.vehicles.urls")),
     path("api/vehicles/", include("apps.vehicles.urls")),

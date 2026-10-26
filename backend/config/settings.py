@@ -95,6 +95,8 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [FRONTEND_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+BACKUP_DIR = Path(os.getenv("BACKUP_DIR", BASE_DIR / "backups"))
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 IS_TESTING = "test" in sys.argv

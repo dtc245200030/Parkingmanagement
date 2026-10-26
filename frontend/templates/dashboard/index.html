@@ -159,6 +159,12 @@
         </button>
 
         <!-- Tab 9: Cài đặt hệ thống (Manager only) -->
+        <button class="nav-item-btn" data-panel="backup">
+          <i class="fa-solid fa-database"></i>
+          <span>Sao lưu &amp; Khôi phục</span>
+          <i class="fa-solid fa-chevron-right nav-arrow"></i>
+        </button>
+
         <button class="nav-item-btn" data-panel="settings">
           <i class="fa-solid fa-gear"></i>
           <span>Cài đặt hệ thống</span>
@@ -810,6 +816,32 @@
 
       <!-- TAB 8: QUẢN LÝ NHÂN VIÊN (Manager Only) -->
       <section id="panel-staff" class="content-tab-pane d-none">
+        <div class="staff-page-header">
+          <div><div class="staff-eyebrow"><i class="fa-solid fa-shield-halved"></i> Quản trị nhân sự</div><h1 class="page-title mb-1">Quản lý nhân viên</h1><p class="staff-page-subtitle">Theo dõi tài khoản, trạng thái làm việc và quyền truy cập hệ thống.</p></div>
+          <button class="staff-primary-btn" onclick="openRegisterModal()"><i class="fa-solid fa-user-plus"></i><span>Thêm nhân viên</span></button>
+        </div>
+        <div class="staff-summary-grid">
+          <article class="staff-summary-card accent-blue"><div class="staff-summary-icon"><i class="fa-solid fa-users"></i></div><div><span>Tổng tài khoản</span><strong id="staff-total-count">0</strong></div></article>
+          <article class="staff-summary-card accent-green"><div class="staff-summary-icon"><i class="fa-solid fa-signal"></i></div><div><span>Đang hoạt động</span><strong id="staff-online-count">0</strong></div></article>
+          <article class="staff-summary-card accent-purple"><div class="staff-summary-icon"><i class="fa-solid fa-user-shield"></i></div><div><span>Quản lý</span><strong id="staff-manager-count">0</strong></div></article>
+          <article class="staff-summary-card accent-orange"><div class="staff-summary-icon"><i class="fa-solid fa-id-badge"></i></div><div><span>Nhân viên</span><strong id="staff-employee-count">0</strong></div></article>
+        </div>
+        <div class="staff-directory-card">
+          <div class="staff-directory-toolbar">
+            <div><h2>Danh sách tài khoản</h2><span id="staff-result-label">Đang tải dữ liệu...</span></div>
+            <div class="staff-filter-group">
+              <label class="staff-search-box"><i class="fa-solid fa-magnifying-glass"></i><input id="staff-search-input" type="search" placeholder="Tìm tên, tài khoản, email..." oninput="renderStaffTab()"></label>
+              <select id="staff-role-filter" class="staff-filter-select" onchange="renderStaffTab()"><option value="all">Tất cả vai trò</option><option value="manager">Quản lý</option><option value="staff">Nhân viên</option></select>
+              <select id="staff-status-filter" class="staff-filter-select" onchange="renderStaffTab()"><option value="all">Mọi trạng thái</option><option value="online">Đang hoạt động</option><option value="offline">Không hoạt động</option></select>
+              <button class="staff-refresh-btn" onclick="loadStaffList()" title="Làm mới"><i class="fa-solid fa-rotate"></i></button>
+            </div>
+          </div>
+          <div class="staff-table-head"><span>Nhân sự</span><span>Liên hệ</span><span>Vai trò &amp; ca làm</span><span>Trạng thái</span><span>Thao tác</span></div>
+          <div id="staff-list-container" class="staff-list-container"><div class="staff-empty-state"><i class="fa-solid fa-spinner fa-spin"></i><span>Đang tải danh sách nhân viên...</span></div></div>
+        </div>
+      </section>
+
+      <section id="panel-staff-legacy" class="content-tab-pane d-none">
         <div class="top-content-header">
           <div><h1 class="page-title">Quản lý nhân viên & Phân quyền</h1></div>
           <button class="btn btn-primary btn-sm rounded-3 px-3 fw-bold" style="background:#0095ff; border:0;" onclick="openRegisterModal()">
@@ -817,10 +849,32 @@
           </button>
         </div>
 
-        <div class="d-flex flex-column gap-3 mb-4" id="staff-list-container"></div>
+        <div class="d-flex flex-column gap-3 mb-4" id="staff-list-container-legacy"></div>
       </section>
 
       <!-- TAB 9: CÀI ĐẶT (Manager Only) -->
+      <section id="panel-backup" class="content-tab-pane d-none">
+        <div class="top-content-header">
+          <div><h1 class="page-title">Sao lưu &amp; Khôi phục dữ liệu</h1><div class="text-secondary small mt-1">Chỉ Quản lý bãi có quyền sử dụng chức năng này.</div></div>
+          <button id="create-backup-btn" class="btn btn-primary btn-sm rounded-3 px-3 fw-bold" onclick="createDatabaseBackup()"><i class="fa-solid fa-cloud-arrow-down me-1"></i> Tạo bản sao lưu</button>
+        </div>
+        <div class="row g-4 mb-4">
+          <div class="col-lg-7"><div class="dark-card h-100">
+            <div class="d-flex align-items-center justify-content-between mb-3"><h3 class="fw-bold text-white fs-6 mb-0">Các bản sao lưu trên máy chủ</h3><button class="btn btn-outline-light btn-sm rounded-pill" onclick="loadDatabaseBackups()"><i class="fa-solid fa-rotate me-1"></i> Làm mới</button></div>
+            <div class="table-responsive"><table class="table table-dark table-hover align-middle mb-0"><thead><tr><th>Tệp</th><th>Thời gian</th><th>Dung lượng</th><th class="text-end">Thao tác</th></tr></thead><tbody id="backup-list-body"><tr><td colspan="4" class="text-center text-secondary py-4">Đang tải danh sách...</td></tr></tbody></table></div>
+          </div></div>
+          <div class="col-lg-5"><div class="dark-card h-100">
+            <h3 class="fw-bold text-white fs-6 mb-3">Khôi phục từ tệp</h3>
+            <div class="alert alert-warning small border-0"><i class="fa-solid fa-triangle-exclamation me-1"></i>Dữ liệu hiện tại sẽ được thay thế. Hệ thống tự tạo một bản dự phòng trước khi khôi phục.</div>
+            <label for="restore-backup-file" class="form-label text-secondary small">Tệp SQLite ParkAI (tối đa 100 MB)</label>
+            <input id="restore-backup-file" type="file" class="form-control form-control-sm mb-3" accept=".sqlite3,.db,application/vnd.sqlite3">
+            <label for="restore-confirmation" class="form-label text-secondary small">Nhập <strong class="text-white">KHOI PHUC</strong> để xác nhận</label>
+            <input id="restore-confirmation" class="form-dark-input mb-3" autocomplete="off" placeholder="KHOI PHUC">
+            <button id="upload-restore-btn" class="btn btn-danger btn-sm rounded-3 px-3 fw-bold" onclick="restoreUploadedBackup()"><i class="fa-solid fa-clock-rotate-left me-1"></i> Khôi phục từ tệp</button>
+          </div></div>
+        </div>
+      </section>
+
       <section id="panel-settings" class="content-tab-pane d-none">
         <div class="top-content-header">
           <div><h1 class="page-title">Cài đặt hệ thống & Bảng giá</h1></div>
@@ -1170,6 +1224,18 @@
   </div>
 
   <!-- MODAL: ĐẶT LẠI MẬT KHẨU NHÂN VIÊN -->
+  <div class="modal fade" id="assignShiftModal" tabindex="-1" aria-labelledby="assignShiftModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content staff-shift-modal">
+      <div class="modal-header"><div><div class="staff-eyebrow mb-1"><i class="fa-solid fa-calendar-check"></i> Điều phối nhân sự</div><h5 class="modal-title" id="assignShiftModalLabel">Phân ca làm việc</h5></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+      <form id="form-assign-shift"><div class="modal-body">
+        <input id="shift-user-id" type="hidden"><div class="shift-employee-banner"><div class="shift-banner-icon"><i class="fa-solid fa-user-clock"></i></div><div><span>Nhân viên</span><strong id="shift-employee-name">--</strong><small id="shift-current-value">Chưa phân ca</small></div></div>
+        <div id="shift-assignment-error" class="alert alert-danger py-2 small d-none"></div>
+        <div class="mb-3"><label class="form-label small fw-bold text-white" for="shift-code">CA LÀM VIỆC</label><select id="shift-code" class="form-dark-input" required><option value="morning">Ca sáng · 06:00–14:00</option><option value="afternoon">Ca chiều · 14:00–22:00</option><option value="night">Ca đêm · 22:00–06:00</option><option value="office">Ca hành chính · 08:00–17:00</option></select></div>
+        <div><label class="form-label small fw-bold text-white" for="shift-area">KHU VỰC PHỤ TRÁCH</label><input id="shift-area" class="form-dark-input" list="parking-area-options" maxlength="60" placeholder="Ví dụ: Khu A" required><datalist id="parking-area-options"><option value="Tất cả khu"><option value="Khu A"><option value="Khu B"><option value="Khu C"><option value="Khu D"></datalist></div>
+      </div><div class="modal-footer"><button type="button" class="btn btn-outline-light rounded-3 px-4" data-bs-dismiss="modal">Hủy</button><button id="shift-assignment-submit" type="submit" class="btn btn-primary rounded-3 px-4 fw-bold"><i class="fa-solid fa-check me-1"></i> Lưu phân ca</button></div></form>
+    </div></div>
+  </div>
+
   <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content" style="background: #131f37; border: 1px solid var(--border-color); color: white; border-radius: 16px;">

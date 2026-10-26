@@ -91,7 +91,7 @@ function applyRolePermissions(userRole) {
   document.body.classList.toggle('role-staff', !isManager);
   
   // Elements that only Managers can access
-  const managerOnlyPanels = ['overview', 'statistics', 'ai', 'staff', 'settings'];
+  const managerOnlyPanels = ['overview', 'statistics', 'ai', 'staff', 'backup', 'settings'];
   // Operational screens are reserved for parking staff.
   const staffOnlyPanels = ['checkinout', 'history'];
   
@@ -337,7 +337,7 @@ function logoutApp() {
 function switchNavPanel(panelName) {
   // Enforce the same permissions even when navigation is triggered by code.
   const isManager = (currentUser.role === 'QuanLy' || currentUser.role === 'manager' || currentUser.role === 'admin');
-  const managerOnlyPanels = ['overview', 'statistics', 'ai', 'staff', 'settings'];
+  const managerOnlyPanels = ['overview', 'statistics', 'ai', 'staff', 'backup', 'settings'];
   const staffOnlyPanels = ['checkinout', 'history'];
   
   if (!isManager && managerOnlyPanels.includes(panelName)) {
@@ -363,6 +363,88 @@ function switchNavPanel(panelName) {
   if (panelName === 'statistics' || panelName === 'overview') {
     setTimeout(initAllCharts, 150);
   }
+  if (panelName === 'backup') loadDatabaseBackups();
+}
+
+function escapeHtml(value) {
+  const node = document.createElement('div');
+  node.textContent = String(value ?? '');
+  return node.innerHTML;
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function loadDatabaseBackups() {
+  const body = document.getElementById('backup-list-body');
+  if (!body) return;
+  body.innerHTML = '<tr><td colspan="4" class="text-center text-secondary py-4">Đang tải danh sách...</td></tr>';
+  try {
+    const response = await fetch('/api/system/backups/', {cache: 'no-store'});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Không thể tải danh sách sao lưu.');
+    if (!data.backups.length) {
+      body.innerHTML = '<tr><td colspan="4" class="text-center text-secondary py-4">Chưa có bản sao lưu.</td></tr>';
+      return;
+    }
+    body.innerHTML = data.backups.map(item => {
+      const filename = escapeHtml(item.filename);
+      const label = item.is_safety_backup ? '<span class="badge bg-warning text-dark ms-1">Dự phòng</span>' : '';
+      return `<tr><td><i class="fa-solid fa-database text-info me-2"></i><span class="small">${filename}</span>${label}</td><td class="small">${new Date(item.created_at).toLocaleString('vi-VN')}</td><td class="small">${formatFileSize(item.size)}</td><td class="text-end text-nowrap"><a class="btn btn-outline-info btn-sm" href="/api/system/backups/${encodeURIComponent(item.filename)}/download/" title="Tải xuống"><i class="fa-solid fa-download"></i></a><button class="btn btn-outline-danger btn-sm ms-1" onclick='restoreStoredBackup(${JSON.stringify(item.filename)})' title="Khôi phục"><i class="fa-solid fa-clock-rotate-left"></i></button></td></tr>`;
+    }).join('');
+  } catch (error) {
+    body.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">${escapeHtml(error.message)}</td></tr>`;
+  }
+}
+
+async function createDatabaseBackup() {
+  const button = document.getElementById('create-backup-btn');
+  if (button) button.disabled = true;
+  try {
+    const response = await fetch('/api/system/backups/create/', {method: 'POST', headers: {'X-CSRFToken': getCsrfToken()}});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Không thể tạo bản sao lưu.');
+    showToast(data.message);
+    await loadDatabaseBackups();
+  } catch (error) { showToast(error.message, 'error'); }
+  finally { if (button) button.disabled = false; }
+}
+
+async function submitRestore(body, isFormData = false) {
+  const headers = {'X-CSRFToken': getCsrfToken()};
+  if (!isFormData) headers['Content-Type'] = 'application/json';
+  const response = await fetch('/api/system/backups/restore/', {method: 'POST', headers, body});
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Khôi phục dữ liệu thất bại.');
+  showToast(`${data.message} Bản dự phòng: ${data.safety_backup}`);
+  setTimeout(() => window.location.reload(), 1800);
+}
+
+async function restoreStoredBackup(filename) {
+  const confirmation = window.prompt(`Khôi phục từ ${filename}?\nNhập KHOI PHUC để xác nhận:`);
+  if (confirmation !== 'KHOI PHUC') {
+    if (confirmation !== null) showToast('Cụm từ xác nhận không đúng.', 'error');
+    return;
+  }
+  try { await submitRestore(JSON.stringify({filename, confirmation})); }
+  catch (error) { showToast(error.message, 'error'); }
+}
+
+async function restoreUploadedBackup() {
+  const fileInput = document.getElementById('restore-backup-file');
+  const confirmationInput = document.getElementById('restore-confirmation');
+  const button = document.getElementById('upload-restore-btn');
+  if (!fileInput.files.length) return showToast('Vui lòng chọn tệp sao lưu.', 'error');
+  if (confirmationInput.value.trim() !== 'KHOI PHUC') return showToast('Hãy nhập đúng KHOI PHUC để xác nhận.', 'error');
+  const form = new FormData();
+  form.append('backup_file', fileInput.files[0]);
+  form.append('confirmation', confirmationInput.value.trim());
+  if (button) button.disabled = true;
+  try { await submitRestore(form, true); }
+  catch (error) { showToast(error.message, 'error'); if (button) button.disabled = false; }
 }
 
 // ------------------------------------------------------------------------
@@ -737,6 +819,60 @@ function filterMonthlyCards() {
 function renderStaffTab() {
   const container = document.getElementById('staff-list-container');
   if (!container) return;
+  const isManagerUser = user => user.ten_vai_tro === 'QuanLy' || user.vai_tro === 1;
+  const total = staffList.length;
+  const online = staffList.filter(user => Boolean(user.is_online)).length;
+  const managers = staffList.filter(isManagerUser).length;
+  const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+  setText('staff-total-count', total);
+  setText('staff-online-count', online);
+  setText('staff-manager-count', managers);
+  setText('staff-employee-count', total - managers);
+
+  const search = (document.getElementById('staff-search-input')?.value || '').trim().toLowerCase();
+  const roleFilter = document.getElementById('staff-role-filter')?.value || 'all';
+  const statusFilter = document.getElementById('staff-status-filter')?.value || 'all';
+  const filteredStaff = staffList.filter(user => {
+    const manager = isManagerUser(user);
+    const searchable = [user.ho_ten, user.ten_dang_nhap, user.email, user.so_dien_thoai].filter(Boolean).join(' ').toLowerCase();
+    if (search && !searchable.includes(search)) return false;
+    if (roleFilter === 'manager' && !manager) return false;
+    if (roleFilter === 'staff' && manager) return false;
+    if (statusFilter === 'online' && !user.is_online) return false;
+    if (statusFilter === 'offline' && user.is_online) return false;
+    return true;
+  });
+  setText('staff-result-label', `Hiển thị ${filteredStaff.length} trong ${total} tài khoản`);
+  if (!filteredStaff.length) {
+    container.innerHTML = '<div class="staff-empty-state"><i class="fa-solid fa-user-slash"></i><strong>Không tìm thấy nhân viên</strong><span>Hãy thử thay đổi từ khóa hoặc bộ lọc.</span></div>';
+    return;
+  }
+
+  container.innerHTML = filteredStaff.map(user => {
+    const manager = isManagerUser(user);
+    const onlineNow = Boolean(user.is_online);
+    const name = escapeHtml(user.ho_ten || 'Chưa cập nhật');
+    const username = escapeHtml(user.ten_dang_nhap || '');
+    const usernameArg = JSON.stringify(user.ten_dang_nhap || '');
+    const roleBadge = manager
+      ? '<span class="staff-role-badge manager"><i class="fa-solid fa-shield-halved"></i> Quản lý</span>'
+      : '<span class="staff-role-badge employee"><i class="fa-solid fa-id-badge"></i> Nhân viên</span>';
+    const actions = manager
+      ? '<span class="staff-protected-label"><i class="fa-solid fa-lock"></i> Tài khoản bảo vệ</span>'
+      : `<button class="staff-action-btn shift" onclick='openAssignShiftModal(${user.ma_nguoi_dung})' title="Phân ca"><i class="fa-solid fa-calendar-days"></i></button><button class="staff-action-btn password" onclick='resetStaffPassword(${user.ma_nguoi_dung}, ${usernameArg})' title="Đặt lại mật khẩu"><i class="fa-solid fa-key"></i></button><button class="staff-action-btn delete" onclick='deleteStaffAccount(${user.ma_nguoi_dung}, ${usernameArg})' title="Xóa tài khoản"><i class="fa-solid fa-trash-can"></i></button>`;
+    return `<article class="staff-row">
+      <div class="staff-identity"><div class="staff-avatar ${manager ? 'manager' : 'employee'}">${name.charAt(0).toUpperCase()}<span class="staff-avatar-status ${onlineNow ? 'online' : ''}"></span></div><div class="staff-identity-text"><strong>${name}</strong><span>@${username}</span></div></div>
+      <div class="staff-contact"><span><i class="fa-regular fa-envelope"></i>${escapeHtml(user.email || 'Chưa cập nhật email')}</span><span><i class="fa-solid fa-phone"></i>${escapeHtml(user.so_dien_thoai || 'Chưa cập nhật SĐT')}</span></div>
+      <div class="staff-role-shift">${roleBadge}<span><i class="fa-regular fa-clock"></i>${escapeHtml(user.ca_lam_viec || 'Ca hành chính')}</span></div>
+      <div><span class="staff-presence ${onlineNow ? 'online' : 'offline'}"><i></i>${onlineNow ? 'Đang hoạt động' : 'Không hoạt động'}</span></div>
+      <div class="staff-actions">${actions}</div>
+    </article>`;
+  }).join('');
+}
+
+function renderStaffTabLegacy() {
+  const container = document.getElementById('staff-list-container');
+  if (!container) return;
 
   if (staffList.length === 0) {
     container.innerHTML = '<div class="text-muted py-3">Đang cập nhật danh sách nhân viên...</div>';
@@ -795,6 +931,43 @@ function renderStaffTab() {
 }
 
 // ------------------------------------------------------------------------
+function openAssignShiftModal(userId) {
+  const user = staffList.find(item => Number(item.ma_nguoi_dung) === Number(userId));
+  if (!user) return showToast('Không tìm thấy nhân viên.', 'error');
+  document.getElementById('shift-user-id').value = user.ma_nguoi_dung;
+  document.getElementById('shift-employee-name').textContent = user.ho_ten;
+  document.getElementById('shift-current-value').textContent = user.ca_lam_viec || 'Chưa phân ca';
+  document.getElementById('shift-code').value = 'morning';
+  document.getElementById('shift-area').value = 'Tất cả khu';
+  document.getElementById('shift-assignment-error').classList.add('d-none');
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('assignShiftModal')).show();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('form-assign-shift');
+  if (!form) return;
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const userId = document.getElementById('shift-user-id').value;
+    const shiftCode = document.getElementById('shift-code').value;
+    const area = document.getElementById('shift-area').value.trim();
+    const errorBox = document.getElementById('shift-assignment-error');
+    const submitButton = document.getElementById('shift-assignment-submit');
+    errorBox.classList.add('d-none');
+    if (!area) { errorBox.textContent = 'Vui lòng nhập khu vực phụ trách.'; errorBox.classList.remove('d-none'); return; }
+    submitButton.disabled = true;
+    try {
+      const response = await fetch(`/api/users/${userId}/assign-shift/`, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()}, body: JSON.stringify({shift_code: shiftCode, area})});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Không thể phân ca.');
+      bootstrap.Modal.getInstance(document.getElementById('assignShiftModal')).hide();
+      showToast(data.message);
+      await loadStaffList();
+    } catch (error) { errorBox.textContent = error.message; errorBox.classList.remove('d-none'); }
+    finally { submitButton.disabled = false; }
+  });
+});
+
 async function resetStaffPassword(userId, username) {
   document.getElementById('reset-password-user-id').value = userId;
   document.getElementById('reset-password-username').textContent = username;

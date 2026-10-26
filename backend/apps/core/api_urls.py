@@ -3,6 +3,8 @@
 from django.http import JsonResponse
 from django.urls import path
 
+from . import views
+
 
 def seed(request):
     """Endpoint bảo vệ nhằm ngăn chặn nạp dữ liệu mẫu trái phép trong môi trường production."""
@@ -11,5 +13,11 @@ def seed(request):
     return JsonResponse({"status": "seed-disabled", "message": "Seed chỉ được bật trong môi trường phát triển."}, status=403)
 
 
-urlpatterns = [path("dev/seed", seed, name="seed")]
+urlpatterns = [
+    path("dev/seed", seed, name="seed"),
+    path("backups/", views.backups, name="backup-list"),
+    path("backups/create/", views.create_database_backup, name="backup-create"),
+    path("backups/restore/", views.restore_database_backup, name="backup-restore"),
+    path("backups/<str:filename>/download/", views.download_database_backup, name="backup-download"),
+]
 

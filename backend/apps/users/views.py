@@ -68,6 +68,30 @@ class NguoiDungViewSet(viewsets.ModelViewSet):
         return Response({"message": f"Đã đặt lại mật khẩu cho {user.ten_dang_nhap}."})
 
 
+    @action(detail=True, methods=["post"], url_path="assign-shift")
+    def assign_shift(self, request, pk=None):
+        """Assign a predefined work shift and parking area to an employee."""
+        if not self._is_manager(request):
+            return Response({"message": "Chỉ Quản lý được phân ca làm việc."}, status=status.HTTP_403_FORBIDDEN)
+        user = self.get_object()
+        if user.vai_tro and user.vai_tro.ten_vai_tro == "QuanLy":
+            return Response({"message": "Không phân ca vận hành cho tài khoản Quản lý."}, status=status.HTTP_400_BAD_REQUEST)
+        shifts = {
+            "morning": "Ca sáng (06:00–14:00)",
+            "afternoon": "Ca chiều (14:00–22:00)",
+            "night": "Ca đêm (22:00–06:00)",
+            "office": "Ca hành chính (08:00–17:00)",
+        }
+        shift_code = request.data.get("shift_code")
+        area = str(request.data.get("area", "")).strip()
+        if shift_code not in shifts:
+            return Response({"message": "Ca làm việc không hợp lệ."}, status=status.HTTP_400_BAD_REQUEST)
+        if not area or len(area) > 60:
+            return Response({"message": "Khu vực phụ trách không hợp lệ."}, status=status.HTTP_400_BAD_REQUEST)
+        user.ca_lam_viec = f"{shifts[shift_code]} • {area}"
+        user.save(update_fields=["ca_lam_viec"])
+        return Response({"message": f"Đã phân {shifts[shift_code]} cho {user.ho_ten}.", "user": NguoiDungSerializer(user).data})
+
     @action(detail=False, methods=["post"], permission_classes=[AllowAny])
     def register(self, request):
         """API hỗ trợ đăng ký tài khoản nhân viên mới."""

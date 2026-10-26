@@ -49,6 +49,24 @@ class UserAdministrationTests(TestCase):
         response = self.client.delete(f"/api/users/{self.manager.ma_nguoi_dung}/")
         self.assertEqual(response.status_code, 400)
 
+    def test_manager_can_assign_staff_shift(self):
+        response = self.client.post(
+            f"/api/users/{self.staff.ma_nguoi_dung}/assign-shift/",
+            {"shift_code": "afternoon", "area": "Khu B"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.staff.refresh_from_db()
+        self.assertEqual(self.staff.ca_lam_viec, "Ca chiều (14:00–22:00) • Khu B")
+
+    def test_manager_cannot_assign_operational_shift_to_manager(self):
+        response = self.client.post(
+            f"/api/users/{self.manager.ma_nguoi_dung}/assign-shift/",
+            {"shift_code": "morning", "area": "Khu A"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+
     def test_unauthenticated_user_cannot_manage_accounts(self):
         self.client.session.flush()
         response = self.client.post(
