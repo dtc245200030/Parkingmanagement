@@ -22,5 +22,6 @@ frontend/dist/
 .vscode/
 .DS_Store
 Thumbs.db
-"backend/.env"
+backend/.env
 backend/backups/
+.env

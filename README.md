@@ -77,6 +77,70 @@ Các tài khoản trên chỉ dùng cho môi trường demo/local.
 
 ## Chạy hệ thống
 
+### Chạy bằng Docker (khuyến nghị khi triển khai)
+
+Yêu cầu Docker Desktop đang chạy. Sau khi clone repository, mở PowerShell tại thư mục gốc của dự án và tạo tệp môi trường từ mẫu:
+
+```powershell
+Copy-Item backend/.env.example backend/.env
+```
+
+Mở `backend/.env`, thay các giá trị bí mật và cấu hình `GEMINI_API_KEY` nếu dùng trợ lý AI. Sau đó kiểm tra cấu hình và khởi động toàn bộ hệ thống:
+
+```powershell
+docker compose --env-file backend/.env -f docker-compose.yml config
+docker compose --env-file backend/.env -f docker-compose.yml up --build -d
+docker compose --env-file backend/.env -f docker-compose.yml ps
+```
+
+Nạp dữ liệu demo trong lần chạy đầu (nếu cơ sở dữ liệu đang trống):
+
+```powershell
+docker compose --env-file backend/.env -f docker-compose.yml exec web python manage.py seed_demo
+```
+
+Dừng hệ thống bằng lệnh dưới đây. Dữ liệu SQLite, bản sao lưu, metrics, logs và cấu hình Grafana được giữ trong Docker volume:
+
+```powershell
+docker compose --env-file backend/.env -f docker-compose.yml down
+```
+
+Chỉ thêm tùy chọn `-v` khi thực sự muốn xóa toàn bộ dữ liệu của môi trường Docker.
+
+#### Giám sát với Prometheus, Grafana và Loki
+
+Lệnh Docker Compose phía trên khởi động ứng dụng cùng toàn bộ hệ thống quản trị và giám sát:
+
+| Dịch vụ | Địa chỉ | Mục đích |
+|---|---|---|
+| ParkAI | <http://localhost:8000/> | Ứng dụng chính |
+| SQLite Web | <http://localhost:8081/> | Quản trị cơ sở dữ liệu SQLite |
+| Django metrics | <http://localhost:8000/metrics> | Số liệu thô của ứng dụng |
+| Prometheus | <http://localhost:9090/> | Thu thập và truy vấn metrics |
+| Grafana | <http://localhost:3000/> | Dashboard metrics và logs |
+| Loki | <http://localhost:3100/ready> | Lưu trữ nhật ký |
+| Promtail | <http://localhost:9080/ready> | Thu thập log Docker và gửi tới Loki |
+| Node Exporter | <http://localhost:9100/metrics> | CPU, RAM, ổ đĩa và mạng của Docker Linux VM |
+| cAdvisor | <http://localhost:8080/> | CPU, RAM, mạng và trạng thái từng container |
+
+Grafana tự động có sẵn hai nguồn dữ liệu `Prometheus`, `Loki` và hai dashboard **ParkAI - Tổng quan hệ thống**, **ParkAI - Hạ tầng và Container** trong thư mục **ParkAI**. Tài khoản được lấy từ `backend/.env` qua `GRAFANA_ADMIN_USER` và `GRAFANA_ADMIN_PASSWORD`; hãy đổi mật khẩu mẫu trước khi triển khai công khai.
+
+SQLite Web dùng mật khẩu trong biến `SQLITE_WEB_PASSWORD` của `backend/.env`. Công cụ này có thể thêm, sửa và xóa dữ liệu trực tiếp, vì vậy chỉ nên mở cổng 8081 trong môi trường nội bộ và cần tạo bản sao lưu trước các thay đổi quan trọng.
+
+Kiểm tra Prometheus đã thu thập dữ liệu: mở **Status → Target health** tại Prometheus và xác nhận các job `parkai-django`, `node-exporter`, `cadvisor`, `prometheus` có trạng thái `UP`. Để xem log trong Grafana, mở dashboard ParkAI hoặc vào **Explore**, chọn nguồn `Loki` và truy vấn:
+
+```logql
+{application="parkai"}
+```
+
+Một số lệnh xử lý sự cố thường dùng:
+
+```powershell
+docker compose --env-file backend/.env -f docker-compose.yml ps
+docker compose --env-file backend/.env -f docker-compose.yml logs -f web sqlite-web prometheus grafana loki promtail node-exporter cadvisor
+docker compose --env-file backend/.env -f docker-compose.yml restart web sqlite-web prometheus grafana loki promtail node-exporter cadvisor
+```
+
 ### Dashboard Django
 
 ```powershell
