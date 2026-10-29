@@ -6,19 +6,44 @@ Hệ thống quản lý bãi đỗ xe gồm REST API Django, giao diện dashboa
 
 ```text
 parking management/
-├── backend/
-│   ├── apps/                 # Các Django app nghiệp vụ
-│   ├── config/               # Settings, URL, WSGI/ASGI
-│   ├── database/             # Cơ sở dữ liệu SQLite cục bộ
-│   ├── .env.example
+├── backend/                         # REST API và nghiệp vụ Django
+│   ├── apps/
+│   │   ├── ai_assistant/            # Trợ lý AI và thu thập dữ liệu
+│   │   ├── authentication/          # Đăng nhập, đăng xuất và session
+│   │   ├── core/                    # Trang chủ, sao lưu và dữ liệu demo
+│   │   ├── parking/                 # Khu vực, vị trí đỗ và bảng giá
+│   │   ├── reports/                 # Thống kê và xuất báo cáo
+│   │   ├── tickets/                 # Lượt gửi xe và vé tháng
+│   │   ├── users/                   # Người dùng và phân quyền
+│   │   └── vehicles/                # Phương tiện và loại xe
+│   ├── config/                      # Settings, URL, WSGI và ASGI
+│   ├── database/                    # Cơ sở dữ liệu cục bộ (không commit dữ liệu chạy)
+│   ├── .env.example                 # Mẫu biến môi trường
 │   ├── manage.py
 │   └── requirements.txt
 ├── frontend/
-│   ├── src/                  # Ứng dụng Vue 3/Vite
-│   ├── templates/            # Dashboard Django hiện tại
-│   ├── static/               # CSS/JavaScript của dashboard Django
+│   ├── src/                         # Ứng dụng Vue 3/Vite
+│   │   ├── api/                     # API client
+│   │   ├── components/              # Component dùng chung
+│   │   ├── router/                  # Điều hướng Vue
+│   │   └── views/                   # Các trang Vue
+│   ├── templates/                   # Giao diện Django đang sử dụng
+│   │   ├── authentication/          # Mẫu đăng nhập
+│   │   └── dashboard/               # Dashboard chính
+│   ├── static/                      # CSS và JavaScript dashboard
 │   ├── index.html
-│   └── package.json
+│   ├── package.json
+│   └── vite.config.js
+├── monitoring/
+│   ├── grafana/                     # Dashboard và provisioning Grafana
+│   ├── loki/                        # Cấu hình lưu trữ log
+│   ├── prometheus/                  # Cấu hình thu thập metrics
+│   └── promtail/                    # Cấu hình chuyển tiếp log
+├── docs/                            # Tài liệu thiết kế, UML và báo cáo
+├── tools/                           # Script hỗ trợ tạo/kiểm tra tài liệu
+├── docker-compose.yml               # Điều phối ứng dụng và monitoring
+├── docker-entrypoint.sh             # Migration và khởi động Django
+├── Dockerfile                       # Image ứng dụng
 └── README.md
 ```
 
