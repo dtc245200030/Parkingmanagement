@@ -22,7 +22,7 @@ def get_realtime_summary():
 
     # 1. Total capacity & Zones
     zones = list(KhuVuc.objects.all().order_by("ma_khu_vuc"))
-    total_capacity = sum(z.suc_chua_toi_da for z in zones) or 300
+    total_capacity = sum(z.suc_chua_toi_da for z in zones) or 500
 
     # 2. In lot active vehicles
     active_sessions = list(LuotGuiXe.objects.filter(trang_thai_luot="Đang gửi").select_related("loai_xe", "khu_vuc", "phuong_tien"))

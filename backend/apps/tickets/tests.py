@@ -73,9 +73,13 @@ class TicketsFlowTests(TestCase):
         out_session = check_out_vehicle(session.ma_luot_gui)
         self.assertEqual(out_session.tong_tien_phi, Decimal("0.00"))
 
-    def test_renew_monthly_ticket(self):
-        """Kiểm tra API gia hạn thời hạn vé tháng."""
+    def test_staff_can_renew_monthly_ticket(self):
+        """Nhân viên được phép gia hạn vé tháng."""
         client = APIClient()
+        session = client.session
+        session["user_id"] = 2
+        session["role"] = "NhanVien"
+        session.save()
         pt = PhuongTien.objects.create(bien_so_xe="30A-11111", loai_xe=self.loai_xe)
         vt = VeThang.objects.create(
             phuong_tien=pt,
@@ -86,11 +90,16 @@ class TicketsFlowTests(TestCase):
         )
         response = client.post(f"/api/tickets/monthly/{vt.ma_ve_thang}/renew/", {"months": 1}, format="json")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["status"], "success")
+        vt.refresh_from_db()
+        self.assertEqual(vt.ngay_ket_thuc, date.today() + timedelta(days=60))
 
-    def test_delete_monthly_ticket(self):
-        """Kiểm tra API xóa vé tháng thành công."""
+    def test_manager_cannot_delete_monthly_ticket(self):
+        """Quản lý không được phép xóa vé tháng."""
         client = APIClient()
+        session = client.session
+        session["user_id"] = 1
+        session["role"] = "QuanLy"
+        session.save()
         pt = PhuongTien.objects.create(bien_so_xe="30A-22222", loai_xe=self.loai_xe)
         vt = VeThang.objects.create(
             phuong_tien=pt,
@@ -100,5 +109,5 @@ class TicketsFlowTests(TestCase):
             trang_thai_ve="Còn hiệu lực"
         )
         response = client.delete(f"/api/tickets/monthly/{vt.ma_ve_thang}/")
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(VeThang.objects.filter(pk=vt.ma_ve_thang).exists())
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(VeThang.objects.filter(pk=vt.ma_ve_thang).exists())

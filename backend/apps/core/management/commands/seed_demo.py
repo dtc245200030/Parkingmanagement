@@ -90,12 +90,11 @@ class Command(BaseCommand):
         """
 
         # 3. Bảng KhuVuc
-        self.stdout.write("[3/10] Khoi tao 4 KhuVuc (300 cho)...")
+        self.stdout.write("[3/10] Khoi tao 3 KhuVuc (500 cho)...")
         zones_data = [
-            ("Khu A", 120, "Khu vực chuyên dành cho xe máy"),
-            ("Khu B", 80, "Khu vực xe máy và xe đạp"),
-            ("Khu C", 60, "Khu vực bãi đỗ ô tô 4-7 chỗ"),
-            ("Khu D", 40, "Khu vực ô tô ngoài trời & tải nhỏ"),
+            ("Khu A", 200, "Khu vực bãi đỗ ô tô 4-7 chỗ"),
+            ("Khu B", 200, "Khu vực chuyên dành cho xe máy"),
+            ("Khu C", 100, "Khu vực chuyên dành cho xe đạp"),
         ]
         zone_objs = {}
         for name, cap, desc in zones_data:
@@ -156,8 +155,8 @@ class Command(BaseCommand):
             ("30A-56789", "Oto", "Khu C", 55, Decimal("20000")),
             ("51H-99999", "Oto", "Khu C", 130, Decimal("40000")),
             ("29A-44444", "Oto", "Khu C", 60, Decimal("20000")),
-            ("51B-77831", "Oto", "Khu D", 70, Decimal("20000")),
-            ("43A-88888", "Oto", "Khu D", 110, Decimal("40000")),
+            ("51B-77831", "Oto", "Khu A", 70, Decimal("20000")),
+            ("43A-88888", "Oto", "Khu A", 110, Decimal("40000")),
             ("ZE-123", "XeDap", "Khu B", 60, Decimal("2000")),
             ("ZE-567", "XeDap", "Khu B", 50, Decimal("2000")),
         ]
@@ -185,14 +184,14 @@ class Command(BaseCommand):
             ("30E-88219", "Oto", "Khu C", 300, 120, Decimal("40000")),
             ("29B-44123", "XeMay", "Khu B", 240, 45, Decimal("5000")),
             ("59V-11234", "XeMay", "Khu A", 360, 90, Decimal("10000")),
-            ("51G-55555", "Oto", "Khu D", 400, 150, Decimal("60000")),
+            ("51G-55555", "Oto", "Khu A", 400, 150, Decimal("60000")),
             ("ZE-999", "XeDap", "Khu B", 180, 60, Decimal("2000")),
             ("29D-77712", "Oto", "Khu C", 420, 120, Decimal("40000")),
             ("43C-66123", "XeMay", "Khu B", 500, 100, Decimal("10000")),
             ("51F-12888", "Oto", "Khu C", 480, 200, Decimal("60000")),
             ("ZE-444", "XeDap", "Khu B", 210, 45, Decimal("2000")),
             ("29A-33112", "XeMay", "Khu A", 520, 90, Decimal("10000")),
-            ("30F-99881", "Oto", "Khu D", 540, 180, Decimal("28000")),
+            ("30F-99881", "Oto", "Khu A", 540, 180, Decimal("28000")),
         ]
         for plate, v_type_code, zone_name, in_mins, dur_mins, fee in past_completed:
             lx = type_objs[v_type_code]

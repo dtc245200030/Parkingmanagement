@@ -149,6 +149,30 @@ function applyRolePermissions(userRole) {
 
 // Handle Login submit
 document.addEventListener('DOMContentLoaded', () => {
+  const menuToggle = document.getElementById('mobile-menu-toggle');
+  const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+
+  const setMobileMenu = (open) => {
+    document.body.classList.toggle('mobile-menu-open', open);
+    if (menuToggle) {
+      menuToggle.setAttribute('aria-expanded', String(open));
+      menuToggle.setAttribute('aria-label', open ? 'Đóng menu điều hướng' : 'Mở menu điều hướng');
+      const icon = menuToggle.querySelector('i');
+      if (icon) icon.className = open ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+    }
+  };
+
+  menuToggle?.addEventListener('click', () => {
+    setMobileMenu(!document.body.classList.contains('mobile-menu-open'));
+  });
+  sidebarBackdrop?.addEventListener('click', () => setMobileMenu(false));
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setMobileMenu(false);
+  });
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 900) setMobileMenu(false);
+  });
+
   const loginForm = document.getElementById('auth-login-form');
   if (loginForm) {
     const usernameInput = document.getElementById('login-username');
@@ -284,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', function() {
       const p = this.getAttribute('data-panel');
       switchNavPanel(p);
+      setMobileMenu(false);
     });
   });
 
@@ -538,6 +563,12 @@ function updateDashboardKPIs(data) {
   const totalCapEl = document.getElementById('kpi-total-capacity');
   if (totalCapEl) totalCapEl.textContent = data.total_capacity ?? 0;
 
+  const capacityNoteEl = document.getElementById('kpi-capacity-note');
+  if (capacityNoteEl) capacityNoteEl.textContent = data.total_capacity ?? 0;
+
+  const zoneCountEl = document.getElementById('kpi-zone-count');
+  if (zoneCountEl) zoneCountEl.textContent = Array.isArray(data.zone_stats) ? data.zone_stats.length : 0;
+
   const activeVehiclesEl = document.getElementById('metric-active-vehicles');
   if (activeVehiclesEl) activeVehiclesEl.textContent = data.total_in_lot !== undefined ? data.total_in_lot : inLotVehicles.length;
 
@@ -589,6 +620,9 @@ function renderOverviewZones() {
     const countEl2 = document.getElementById(`zone-${z.code.toLowerCase()}-count-2`);
     if (countEl2) countEl2.textContent = inLot;
 
+    const capacityEl = document.getElementById(`zone-${z.code.toLowerCase()}-capacity`);
+    if (capacityEl) capacityEl.textContent = z.capacity ?? 0;
+
     const availEl = document.getElementById(`zone-${z.code.toLowerCase()}-avail`);
     if (availEl) availEl.textContent = available;
 
@@ -601,6 +635,8 @@ function renderOverviewZones() {
     // Map zone cards
     const mapCountEl = document.getElementById(`map-count-${z.code.toLowerCase()}`);
     if (mapCountEl) mapCountEl.textContent = inLot;
+    const mapCapacityEl = document.getElementById(`map-capacity-${z.code.toLowerCase()}`);
+    if (mapCapacityEl) mapCapacityEl.textContent = z.capacity ?? 0;
     const mapAvailEl = document.getElementById(`map-avail-${z.code.toLowerCase()}`);
     if (mapAvailEl) mapAvailEl.textContent = `${rate}% • còn ${available} chỗ`;
   });
@@ -762,6 +798,7 @@ function renderMonthlyCards() {
   }
 
   let html = '';
+  const canEditMonthlyTicket = currentUser?.role === 'NhanVien';
   filtered.forEach(c => {
     const vType = c.ten_loai_xe || 'XeMay';
     const icon = (vType === 'XeMay' || vType === 'MOTORBIKE') ? 'fa-motorcycle text-warning' : ((vType === 'Oto' || vType === 'CAR') ? 'fa-car text-danger' : 'fa-bicycle text-info');
@@ -797,12 +834,10 @@ function renderMonthlyCards() {
               <button class="btn btn-sm btn-outline-info rounded-pill px-2 py-1" title="Xem chi tiết" onclick="viewMonthlyTicketDetail(${c.ma_ve_thang})">
                 <i class="fa-solid fa-id-card"></i>
               </button>
-              <button class="btn btn-sm btn-outline-success rounded-pill px-2 py-1" title="Gia hạn vé tháng" onclick="openRenewMonthlyModal(${c.ma_ve_thang})">
-                <i class="fa-solid fa-arrows-rotate"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" title="Xóa vé tháng" onclick="deleteMonthlyTicket(${c.ma_ve_thang})">
-                <i class="fa-solid fa-trash"></i>
-              </button>
+              ${canEditMonthlyTicket ? `
+              <button class="btn btn-sm btn-outline-success rounded-pill px-2 py-1" title="Gia hạn vé tháng" onclick="openRenewMonthlyModal(${c.ma_ve_thang})"><i class="fa-solid fa-arrows-rotate"></i></button>
+              <button class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" title="Xóa vé tháng" onclick="deleteMonthlyTicket(${c.ma_ve_thang})"><i class="fa-solid fa-trash"></i></button>
+              ` : ''}
             </div>
           </div>
         </div>
@@ -967,6 +1002,39 @@ document.addEventListener('DOMContentLoaded', () => {
     finally { submitButton.disabled = false; }
   });
 });
+
+async function deleteMonthlyTicket(monthlyId) {
+  const item = monthlyCustomers.find(c => String(c.ma_ve_thang) === String(monthlyId));
+  if (!confirm(`Bạn có chắc muốn xóa vé tháng của "${item?.ho_ten_khach_hang || ''}"?`)) return;
+  const res = await fetch(`/api/tickets/monthly/${monthlyId}/`, { method: 'DELETE', headers: { 'X-CSRFToken': getCsrfToken() } });
+  const data = await res.json();
+  showToast(data.message || (res.ok ? 'Đã xóa vé tháng.' : 'Không thể xóa vé tháng.'), res.ok ? 'success' : 'error');
+  if (res.ok) await loadAllDataFromDatabase();
+}
+
+function openRenewMonthlyModal(monthlyId) {
+  const item = monthlyCustomers.find(c => String(c.ma_ve_thang) === String(monthlyId));
+  if (!item) return;
+  document.getElementById('renew-monthly-id').value = item.ma_ve_thang;
+  document.getElementById('renew-cust-name').textContent = item.ho_ten_khach_hang;
+  document.getElementById('renew-current-expiry').textContent = new Date(item.ngay_ket_thuc).toLocaleDateString('vi-VN');
+  new bootstrap.Modal(document.getElementById('renewMonthlyModal')).show();
+}
+
+async function handleRenewMonthlySubmit(e) {
+  e.preventDefault();
+  const monthlyId = document.getElementById('renew-monthly-id').value;
+  const res = await fetch(`/api/tickets/monthly/${monthlyId}/renew/`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+    body: JSON.stringify({ months: document.getElementById('renew-months-select').value })
+  });
+  const data = await res.json();
+  showToast(data.message || (res.ok ? 'Gia hạn thành công.' : 'Không thể gia hạn.'), res.ok ? 'success' : 'error');
+  if (res.ok) {
+    bootstrap.Modal.getInstance(document.getElementById('renewMonthlyModal'))?.hide();
+    await loadAllDataFromDatabase();
+  }
+}
 
 async function resetStaffPassword(userId, username) {
   document.getElementById('reset-password-user-id').value = userId;
@@ -1494,116 +1562,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const formRenewMonthly = document.getElementById('form-renew-monthly');
-  if (formRenewMonthly) {
-    formRenewMonthly.addEventListener('submit', handleRenewMonthlySubmit);
-  }
 });
-
-async function deleteMonthlyTicket(monthlyId) {
-  const item = monthlyCustomers.find(c => String(c.ma_ve_thang) === String(monthlyId));
-  const custName = item ? item.ho_ten_khach_hang : '';
-  if (!confirm(`Bạn có chắc chắn muốn xóa vé tháng của khách hàng "${custName}" khỏi hệ thống?`)) {
-    return;
-  }
-
-  try {
-    const res = await fetch(`/api/tickets/monthly/${monthlyId}/`, {
-      method: 'DELETE',
-      headers: {
-        'X-CSRFToken': getCsrfToken()
-      }
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      showToast(data.message || 'Đã xóa vé tháng thành công!');
-      const modalEl = document.getElementById('viewMonthlyTicketModal');
-      if (modalEl) {
-        const modalInstance = bootstrap.Modal.getInstance(modalEl);
-        if (modalInstance) modalInstance.hide();
-      }
-      await loadAllDataFromDatabase();
-    } else {
-      showToast(data.message || 'Lỗi khi xóa vé tháng', 'error');
-    }
-  } catch (err) {
-    showToast('Lỗi xóa vé tháng: ' + err.message, 'error');
-  }
-}
-
-function openRenewMonthlyModal(monthlyId) {
-  const item = monthlyCustomers.find(c => String(c.ma_ve_thang) === String(monthlyId));
-  if (!item) return;
-
-  document.getElementById('renew-monthly-id').value = item.ma_ve_thang;
-  document.getElementById('renew-cust-name').textContent = item.ho_ten_khach_hang;
-  document.getElementById('renew-cust-info').textContent = `Biển số: ${item.bien_so_xe} • SĐT: ${item.so_dien_thoai || 'N/A'}`;
-  
-  const endFormatted = item.ngay_ket_thuc ? new Date(item.ngay_ket_thuc).toLocaleDateString('vi-VN') : '--';
-  document.getElementById('renew-current-expiry').textContent = endFormatted;
-
-  document.getElementById('renew-months-select').value = '1';
-  document.getElementById('renew-new-date').value = '';
-
-  const viewModalEl = document.getElementById('viewMonthlyTicketModal');
-  if (viewModalEl) {
-    const viewModal = bootstrap.Modal.getInstance(viewModalEl);
-    if (viewModal) viewModal.hide();
-  }
-
-  const modalEl = document.getElementById('renewMonthlyModal');
-  if (modalEl) {
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
-  }
-}
-
-function updateRenewDatePreview() {
-  // Clearing manual date input if dropdown changes
-  const manualDate = document.getElementById('renew-new-date');
-  if (manualDate) manualDate.value = '';
-}
-
-async function handleRenewMonthlySubmit(e) {
-  if (e) e.preventDefault();
-  const monthlyId = document.getElementById('renew-monthly-id').value;
-  const months = document.getElementById('renew-months-select').value;
-  const newDate = document.getElementById('renew-new-date').value;
-
-  const payload = {};
-  if (newDate) {
-    payload.new_end_date = newDate;
-  } else {
-    payload.months = months;
-  }
-
-  try {
-    const res = await fetch(`/api/tickets/monthly/${monthlyId}/renew/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCsrfToken()
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-    if (res.ok && data.status === 'success') {
-      showToast(data.message || 'Gia hạn vé tháng thành công!');
-      const modalEl = document.getElementById('renewMonthlyModal');
-      if (modalEl) {
-        const modalInstance = bootstrap.Modal.getInstance(modalEl);
-        if (modalInstance) modalInstance.hide();
-      }
-      await loadAllDataFromDatabase();
-    } else {
-      showToast(data.message || 'Lỗi gia hạn vé tháng', 'error');
-    }
-  } catch (err) {
-    showToast('Lỗi gia hạn: ' + err.message, 'error');
-  }
-}
 
 // ------------------------------------------------------------------------
 // Excel Export Function

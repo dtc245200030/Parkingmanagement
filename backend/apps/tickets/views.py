@@ -1,4 +1,4 @@
-"""API Views và ViewSets quản lý vé xe, lượt gửi xe (check-in/check-out) và đăng ký/gia hạn vé tháng."""
+"""API Views và ViewSets quản lý vé xe, lượt gửi xe và đăng ký vé tháng."""
 
 from django.db.models import Q
 from rest_framework import status, viewsets
@@ -172,11 +172,23 @@ class LuotGuiXeViewSet(viewsets.ModelViewSet):
 
 
 class VeThangViewSet(viewsets.ModelViewSet):
-    """ViewSet quản lý CRUD vé tháng và gia hạn thời gian sử dụng."""
+    """ViewSet quản lý vé tháng; xóa và gia hạn chỉ dành cho nhân viên."""
 
     queryset = VeThang.objects.all().select_related("phuong_tien", "phuong_tien__loai_xe").order_by("-ma_ve_thang")
     serializer_class = VeThangSerializer
     permission_classes = [AllowAny]
+
+    def _staff_actions_allowed(self):
+        return (
+            self.request.session.get("user_id") is not None
+            and self.request.session.get("role") == "NhanVien"
+        )
+
+    def _staff_only_response(self):
+        return Response(
+            {"status": "error", "message": "Chức năng này chỉ dành cho nhân viên."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
     def create(self, request, *args, **kwargs):
         """Đăng ký vé tháng mới cho khách hàng."""
@@ -224,65 +236,39 @@ class VeThangViewSet(viewsets.ModelViewSet):
         )
 
     def destroy(self, request, *args, **kwargs):
-        """Hủy vé tháng của phương tiện."""
+        if not self._staff_actions_allowed():
+            return self._staff_only_response()
         instance = self.get_object()
-        cust_name = instance.ho_ten_khach_hang
-        plate = instance.phuong_tien.bien_so_xe if instance.phuong_tien else ""
         self.perform_destroy(instance)
-
-        return Response(
-            {
-                "status": "success",
-                "message": f"Đã xóa vé tháng của khách hàng {cust_name} (Biển số: {plate}) thành công!",
-            },
-            status=status.HTTP_200_OK,
-        )
+        return Response({"status": "success", "message": "Đã xóa vé tháng thành công!"})
 
     @action(detail=True, methods=["post"])
     def renew(self, request, pk=None):
-        """Gia hạn vé tháng - kéo dài thời hạn sử dụng."""
+        if not self._staff_actions_allowed():
+            return self._staff_only_response()
+
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+
         instance = self.get_object()
-        data = request.data
-
-        from django.utils import timezone as tz
-        from datetime import timedelta
-
-        # Number of months to renew (default 1)
-        months = int(data.get("months", 1))
-        new_end_date_str = data.get("new_end_date")
-
-        today = tz.now().date()
-
-        if new_end_date_str:
-            from datetime import datetime
+        new_end_date = request.data.get("new_end_date")
+        if new_end_date:
             try:
-                new_end = datetime.strptime(new_end_date_str, "%Y-%m-%d").date()
+                new_end = datetime.strptime(new_end_date, "%Y-%m-%d").date()
             except ValueError:
-                return Response(
-                    {"status": "error", "message": "Ngày gia hạn không hợp lệ (YYYY-MM-DD)."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                return Response({"status": "error", "message": "Ngày gia hạn không hợp lệ."}, status=400)
         else:
-            base_date = max(instance.ngay_ket_thuc, today)
-            # Add approx 30 days per month
-            new_end = base_date + timedelta(days=30 * months)
+            try:
+                months = max(1, int(request.data.get("months", 1)))
+            except (TypeError, ValueError):
+                return Response({"status": "error", "message": "Số tháng không hợp lệ."}, status=400)
+            new_end = max(instance.ngay_ket_thuc, timezone.now().date()) + timedelta(days=30 * months)
 
-        if new_end <= today:
-            return Response(
-                {"status": "error", "message": "Ngày gia hạn phải sau ngày hôm nay."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        if new_end <= timezone.now().date():
+            return Response({"status": "error", "message": "Ngày hết hạn mới phải sau hôm nay."}, status=400)
 
         instance.ngay_ket_thuc = new_end
         instance.trang_thai_ve = "Còn hiệu lực"
         instance.moi_gia_han = True
-        instance.save()
-
-        return Response(
-            {
-                "status": "success",
-                "message": f"Đã gia hạn vé tháng cho {instance.ho_ten_khach_hang} đến ngày {new_end.strftime('%d/%m/%Y')}!",
-                "data": VeThangSerializer(instance).data,
-            },
-            status=status.HTTP_200_OK,
-        )
+        instance.save(update_fields=["ngay_ket_thuc", "trang_thai_ve", "moi_gia_han"])
+        return Response({"status": "success", "message": "Gia hạn vé tháng thành công!", "data": VeThangSerializer(instance).data})

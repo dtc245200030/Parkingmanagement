@@ -86,8 +86,19 @@
 
   <!-- 3. APP SHELL (GIAO DIỆN CHÍNH) -->
   <div id="app-shell-view" class="app-shell d-none">
+    <header class="mobile-app-header">
+      <div class="mobile-brand">
+        <span class="mobile-brand-mark"><i class="fa-solid fa-car-side"></i></span>
+        <span><strong>ParkAI</strong><small>Quản lý bãi đỗ xe</small></span>
+      </div>
+      <button id="mobile-menu-toggle" class="mobile-menu-toggle" type="button"
+              aria-label="Mở menu điều hướng" aria-controls="app-sidebar" aria-expanded="false">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </header>
+    <button id="sidebar-backdrop" class="sidebar-backdrop" type="button" tabindex="-1" aria-label="Đóng menu"></button>
     <!-- SIDEBAR -->
-    <aside class="app-sidebar">
+    <aside id="app-sidebar" class="app-sidebar" aria-label="Điều hướng chính">
       <div class="sidebar-header">
         <div class="d-flex align-items-center gap-2">
           <div class="brand-logo-circle" style="width: 38px; height: 38px; font-size: 17px; border-radius: 10px;">
@@ -212,8 +223,8 @@
                 <span class="metric-label">TỔNG SỨC CHỨA</span>
                 <div class="metric-icon-small bg-primary bg-opacity-10 text-primary"><i class="fa-solid fa-location-dot"></i></div>
               </div>
-              <div class="metric-val" id="kpi-total-capacity">300</div>
-              <div class="metric-note">Toàn bộ 4 khu vực <span class="trend-up">~ 300 chỗ</span></div>
+              <div class="metric-val" id="kpi-total-capacity">500</div>
+              <div class="metric-note"><span>Toàn bộ <span id="kpi-zone-count">3</span> khu vực</span><span class="trend-up">~ <span id="kpi-capacity-note">500</span> chỗ</span></div>
             </div>
           </div>
           <div class="col-lg-3 col-sm-6">
@@ -223,7 +234,7 @@
                 <div class="metric-icon-small" style="background: rgba(139,92,246,0.15); color: #8b5cf6;"><i class="fa-solid fa-car"></i></div>
               </div>
               <div class="metric-val" id="metric-active-vehicles">12</div>
-              <div class="metric-note"><span id="metric-occupancy-rate">3% công suất</span> <span class="trend-up">Thực tế CSDL</span></div>
+              <div class="metric-note"><span id="metric-occupancy-rate">3% công suất</span></div>
             </div>
           </div>
           <div class="col-lg-3 col-sm-6">
@@ -233,7 +244,7 @@
                 <div class="metric-icon-small bg-success bg-opacity-10 text-success"><i class="fa-solid fa-arrow-trend-up"></i></div>
               </div>
               <div class="metric-val" id="metric-today-in">25</div>
-              <div class="metric-note"><span id="metric-today-out">13 lượt đã ra</span> <span class="trend-up">+15% vs hôm qua</span></div>
+              <div class="metric-note"><span id="metric-today-out">13 lượt đã ra</span></div>
             </div>
           </div>
           <div class="col-lg-3 col-sm-6">
@@ -243,7 +254,7 @@
                 <div class="metric-icon-small text-warning" style="background: rgba(245,158,11,0.15);"><i class="fa-solid fa-dollar-sign"></i></div>
               </div>
               <div class="metric-val" id="metric-today-revenue">297.000 đ</div>
-              <div class="metric-note">Cập nhật tự động <span class="trend-up">+11%</span></div>
+              <div class="metric-note">Cập nhật tự động</div>
             </div>
           </div>
         </div>
@@ -261,7 +272,7 @@
                     </div>
                     <span class="status-pill status-inlot">Còn chỗ</span>
                   </div>
-                  <div class="d-flex justify-content-between text-white small mt-2"><span>Lưu lượng hiện tại:</span><span class="fw-bold text-white"><span id="zone-a-count">3</span>/140</span></div>
+                  <div class="d-flex justify-content-between text-white small mt-2"><span>Lưu lượng hiện tại:</span><span class="fw-bold text-white"><span id="zone-a-count">3</span>/<span id="zone-a-capacity">200</span></span></div>
                   <div class="dark-progress"><div id="zone-a-progress" class="dark-progress-bar bg-primary" style="width: 3%;"></div></div>
                   <div class="d-flex justify-content-between text-center pt-2 border-top border-secondary border-opacity-10 mt-2">
                     <div><div class="fw-bold text-white fs-6" id="zone-a-count-2">3</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Đang gửi</div></div>
@@ -280,7 +291,7 @@
                     </div>
                     <span class="status-pill status-inlot">Còn chỗ</span>
                   </div>
-                  <div class="d-flex justify-content-between text-white small mt-2"><span>Lưu lượng hiện tại:</span><span class="fw-bold text-white"><span id="zone-b-count">2</span>/90</span></div>
+                  <div class="d-flex justify-content-between text-white small mt-2"><span>Lưu lượng hiện tại:</span><span class="fw-bold text-white"><span id="zone-b-count">2</span>/<span id="zone-b-capacity">200</span></span></div>
                   <div class="dark-progress"><div id="zone-b-progress" class="dark-progress-bar bg-success" style="width: 3%;"></div></div>
                   <div class="d-flex justify-content-between text-center pt-2 border-top border-secondary border-opacity-10 mt-2">
                     <div><div class="fw-bold text-white fs-6" id="zone-b-count-2">2</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Đang gửi</div></div>
@@ -299,7 +310,7 @@
                     </div>
                     <span class="status-pill status-inlot">Còn chỗ</span>
                   </div>
-                  <div class="d-flex justify-content-between text-white small mt-2"><span>Lưu lượng hiện tại:</span><span class="fw-bold text-white"><span id="zone-c-count">3</span>/70</span></div>
+                  <div class="d-flex justify-content-between text-white small mt-2"><span>Lưu lượng hiện tại:</span><span class="fw-bold text-white"><span id="zone-c-count">3</span>/<span id="zone-c-capacity">100</span></span></div>
                   <div class="dark-progress"><div id="zone-c-progress" class="dark-progress-bar" style="background: #8b5cf6; width: 5%;"></div></div>
                   <div class="d-flex justify-content-between text-center pt-2 border-top border-secondary border-opacity-10 mt-2">
                     <div><div class="fw-bold text-white fs-6" id="zone-c-count-2">3</div><div class="text-white opacity-75 small" style="font-size: 0.72rem;">Đang gửi</div></div>
@@ -518,7 +529,7 @@
                   <div class="map-zone-block active" onclick="selectMapZone('A')">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                       <div class="d-flex align-items-center gap-2"><span class="zone-badge badge-zone-a">A</span><span class="fw-bold text-white fs-6">Khu A</span></div>
-                      <div class="fw-bold text-white"><span class="fs-5" id="map-count-a">3</span> <span class="text-white opacity-75">/140</span></div>
+                      <div class="fw-bold text-white"><span class="fs-5" id="map-count-a">3</span> <span class="text-white opacity-75">/<span id="map-capacity-a">200</span></span></div>
                     </div>
                     <div class="text-white opacity-75 small mb-2"><i class="fa-solid fa-car text-primary"></i> Ô tô</div>
                     <div class="dark-progress"><div class="dark-progress-bar bg-primary" style="width: 3%;"></div></div>
@@ -530,7 +541,7 @@
                   <div class="map-zone-block" onclick="selectMapZone('B')">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                       <div class="d-flex align-items-center gap-2"><span class="zone-badge badge-zone-b">B</span><span class="fw-bold text-white fs-6">Khu B</span></div>
-                      <div class="fw-bold text-white"><span class="fs-5" id="map-count-b">2</span> <span class="text-white opacity-75">/90</span></div>
+                      <div class="fw-bold text-white"><span class="fs-5" id="map-count-b">2</span> <span class="text-white opacity-75">/<span id="map-capacity-b">200</span></span></div>
                     </div>
                     <div class="text-white opacity-75 small mb-2"><i class="fa-solid fa-motorcycle text-success"></i> Xe máy</div>
                     <div class="dark-progress"><div class="dark-progress-bar bg-success" style="width: 3%;"></div></div>
@@ -542,7 +553,7 @@
                   <div class="map-zone-block" onclick="selectMapZone('C')">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                       <div class="d-flex align-items-center gap-2"><span class="zone-badge badge-zone-c">C</span><span class="fw-bold text-white fs-6">Khu C</span></div>
-                      <div class="fw-bold text-white"><span class="fs-5" id="map-count-c">3</span> <span class="text-white opacity-75">/70</span></div>
+                      <div class="fw-bold text-white"><span class="fs-5" id="map-count-c">3</span> <span class="text-white opacity-75">/<span id="map-capacity-c">100</span></span></div>
                     </div>
                     <div class="text-white opacity-75 small mb-2"><i class="fa-solid fa-bicycle" style="color:#a78bfa;"></i> Xe đạp</div>
                     <div class="dark-progress"><div class="dark-progress-bar" style="background:#8b5cf6; width: 5%;"></div></div>
@@ -1320,46 +1331,16 @@
     </div>
   </div>
 
-  <!-- MODAL: GIA HẠN VÉ THÁNG -->
   <div class="modal fade" id="renewMonthlyModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content" style="background: #131f37; border: 1px solid var(--border-color); color: white; border-radius: 16px;">
-        <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
-          <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-arrows-rotate text-info me-2"></i> Gia hạn vé tháng</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="form-renew-monthly">
-            <input type="hidden" id="renew-monthly-id">
-            <div class="mb-3 p-3 rounded-3" style="background: var(--bg-input);">
-              <div class="fw-bold text-white fs-6" id="renew-cust-name">--</div>
-              <div class="text-info small" id="renew-cust-info">--</div>
-              <div class="text-white opacity-75 small mt-1">Hạn hiện tại: <span class="fw-bold text-warning" id="renew-current-expiry">--</span></div>
-            </div>
-
-            <div class="mb-3">
-              <label class="small fw-bold text-white mb-1">GIA HẠN THÊM</label>
-              <select id="renew-months-select" class="form-dark-input" onchange="updateRenewDatePreview()">
-                <option value="1" selected>1 tháng</option>
-                <option value="2">2 tháng</option>
-                <option value="3">3 tháng</option>
-                <option value="6">6 tháng</option>
-                <option value="12">12 tháng (1 năm)</option>
-              </select>
-            </div>
-
-            <div class="mb-4">
-              <label class="small fw-bold text-white mb-1">HOẶC CHỌN NGÀY HẾT HẠN MỚI</label>
-              <input id="renew-new-date" type="date" class="form-dark-input">
-            </div>
-
-            <button type="submit" class="btn btn-success w-100 py-3 fw-bold rounded-3" style="background: #10b981; border: 0;">
-              <i class="fa-solid fa-check me-2"></i> Xác nhận gia hạn
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content" style="background:#131f37;color:white">
+      <div class="modal-header"><h5 class="modal-title">Gia hạn vé tháng</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+      <form id="form-renew-monthly" onsubmit="handleRenewMonthlySubmit(event)"><div class="modal-body">
+        <input type="hidden" id="renew-monthly-id">
+        <div class="mb-3"><strong id="renew-cust-name"></strong><div>Hạn hiện tại: <span id="renew-current-expiry"></span></div></div>
+        <label class="form-label" for="renew-months-select">Gia hạn thêm</label>
+        <select id="renew-months-select" class="form-dark-input"><option value="1">1 tháng</option><option value="3">3 tháng</option><option value="6">6 tháng</option><option value="12">12 tháng</option></select>
+      </div><div class="modal-footer"><button type="submit" class="btn btn-success">Xác nhận gia hạn</button></div></form>
+    </div></div>
   </div>
 
 {% endblock %}

@@ -17,7 +17,7 @@ def collect_db_context() -> dict:
     # 1. TỔNG QUAN BÃI ĐỖ XE & KHU VỰC
     # =========================================================
     zones = list(KhuVuc.objects.all().order_by("ma_khu_vuc"))
-    total_capacity = sum(z.suc_chua_toi_da for z in zones) or 300
+    total_capacity = sum(z.suc_chua_toi_da for z in zones) or 500
 
     # Lượt xe đang gửi thực tế (dùng đúng chuỗi "Đang gửi" trong CSDL)
     active_sessions = LuotGuiXe.objects.filter(trang_thai_luot="Đang gửi").select_related("loai_xe", "khu_vuc")
