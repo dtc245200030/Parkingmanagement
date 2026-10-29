@@ -39,8 +39,6 @@ parking management/
 │   ├── loki/                        # Cấu hình lưu trữ log
 │   ├── prometheus/                  # Cấu hình thu thập metrics
 │   └── promtail/                    # Cấu hình chuyển tiếp log
-├── docs/                            # Tài liệu thiết kế, UML và báo cáo
-├── tools/                           # Script hỗ trợ tạo/kiểm tra tài liệu
 ├── docker-compose.yml               # Điều phối ứng dụng và monitoring
 ├── docker-entrypoint.sh             # Migration và khởi động Django
 ├── Dockerfile                       # Image ứng dụng
